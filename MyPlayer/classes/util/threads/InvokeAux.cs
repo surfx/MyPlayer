@@ -1,4 +1,4 @@
-﻿namespace MyPlayer.classes.util
+﻿namespace MyPlayer.classes.util.threads
 {
     /// <summary>
     /// Acesso a componentes do form Thread Safe

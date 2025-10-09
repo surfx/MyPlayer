@@ -37,6 +37,10 @@
             imageList1 = new ImageList(components);
             listView1 = new ListView();
             button1 = new Button();
+            btnRandomizar = new Button();
+            btnVoltar = new Button();
+            btnPlayPause = new Button();
+            btnProximo = new Button();
             SuspendLayout();
             // 
             // label1
@@ -105,11 +109,55 @@
             button1.UseVisualStyleBackColor = true;
             button1.Click += button1_Click;
             // 
+            // btnRandomizar
+            // 
+            btnRandomizar.Location = new Point(146, 409);
+            btnRandomizar.Name = "btnRandomizar";
+            btnRandomizar.Size = new Size(63, 34);
+            btnRandomizar.TabIndex = 6;
+            btnRandomizar.Text = "rnd";
+            btnRandomizar.UseVisualStyleBackColor = true;
+            btnRandomizar.Click += btnRandomizar_Click;
+            // 
+            // btnVoltar
+            // 
+            btnVoltar.Location = new Point(215, 409);
+            btnVoltar.Name = "btnVoltar";
+            btnVoltar.Size = new Size(41, 34);
+            btnVoltar.TabIndex = 7;
+            btnVoltar.Text = "|<";
+            btnVoltar.UseVisualStyleBackColor = true;
+            btnVoltar.Click += btnVoltar_Click;
+            // 
+            // btnPlayPause
+            // 
+            btnPlayPause.Location = new Point(262, 409);
+            btnPlayPause.Name = "btnPlayPause";
+            btnPlayPause.Size = new Size(41, 34);
+            btnPlayPause.TabIndex = 8;
+            btnPlayPause.Text = ">";
+            btnPlayPause.UseVisualStyleBackColor = true;
+            btnPlayPause.Click += btnPlayPause_Click;
+            // 
+            // btnProximo
+            // 
+            btnProximo.Location = new Point(309, 409);
+            btnProximo.Name = "btnProximo";
+            btnProximo.Size = new Size(41, 34);
+            btnProximo.TabIndex = 9;
+            btnProximo.Text = ">|";
+            btnProximo.UseVisualStyleBackColor = true;
+            btnProximo.Click += btnProximo_Click;
+            // 
             // frmMyPlayer
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1122, 469);
+            Controls.Add(btnProximo);
+            Controls.Add(btnPlayPause);
+            Controls.Add(btnVoltar);
+            Controls.Add(btnRandomizar);
             Controls.Add(button1);
             Controls.Add(listView1);
             Controls.Add(treeView1);
@@ -134,5 +182,9 @@
         private ListView listView1;
         private ImageList imageList1;
         private Button button1;
+        private Button btnRandomizar;
+        private Button btnVoltar;
+        private Button btnPlayPause;
+        private Button btnProximo;
     }
 }

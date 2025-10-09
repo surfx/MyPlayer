@@ -81,11 +81,12 @@ namespace MyPlayer.classes.player
 
         public void Stop()
         {
+            IsPlaying = false;
+            IsPaused = false;
+
             if (!IsValid) { return; }
             waveOutEvent!.Stop();
             audioFile!.Position = 0;
-            IsPlaying = false;
-            IsPaused = false;
 
             EvtStop?.Invoke(this, EventArgs.Empty);
         }

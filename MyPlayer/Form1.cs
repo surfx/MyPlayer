@@ -1,4 +1,7 @@
-#define DEBUG
+﻿#define DEBUG
+
+using MyPlayer.classes.util;
+using MyPlayer.classes.util.threads;
 
 namespace MyPlayer
 {
@@ -9,7 +12,7 @@ namespace MyPlayer
         private static extern bool AllocConsole();
 #endif
 
-        // extens�es permitidas para tocar pelo NAudio
+        // extensões permitidas para tocar pelo NAudio
         private static readonly string[] ExtensoesPermitidas = [".mp3", ".mp4", ".wav", ".flac", ".aac", ".wma"];
 
         public frmMyPlayer()
@@ -45,9 +48,9 @@ namespace MyPlayer
         #region treeview
         public void PreencherTreeView(TreeView treeView, string path)
         {
-            treeView.Nodes.Clear(); // Limpa a �rvore
+            treeView.Nodes.Clear(); // Limpa a árvore
 
-            // Obter todos os n�veis acima do caminho fornecido
+            // Obter todos os níveis acima do caminho fornecido
             string[] partes = path.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
             string acumulador = path.StartsWith(Path.DirectorySeparatorChar.ToString()) ? Path.DirectorySeparatorChar.ToString() : partes[0] + @"\";
 
@@ -75,13 +78,13 @@ namespace MyPlayer
                 }
             }
 
-            // Agora currentNode � o n� raiz da pasta fornecida
+            // Agora currentNode é o nó raiz da pasta fornecida
             if (Directory.Exists(path) && currentNode != null)
             {
                 AdicionarPastasRecursivamente(currentNode, path);
             }
 
-            treeView.ExpandAll(); // Expande todos os n�s
+            treeView.ExpandAll(); // Expande todos os nós
         }
 
         private void AdicionarPastasRecursivamente(TreeNode node, string path)
@@ -104,7 +107,7 @@ namespace MyPlayer
             }
             catch (UnauthorizedAccessException)
             {
-                // Ignora pastas sem permiss�o
+                // Ignora pastas sem permissão
             }
             catch (Exception ex)
             {
@@ -127,17 +130,17 @@ namespace MyPlayer
 
         private void ListarArquivos(string path)
         {
-            const int maxFileStr = 50;
+            const int maxFileStr = 100;
 
             listView1.Items.Clear();
 
-            // Configura��o inicial do ListView
+            // Configuração inicial do ListView
             listView1.View = View.Details;
             listView1.SmallImageList = imageList1;
             listView1.Columns.Clear();
             listView1.Columns.Add("Nome", 150);
             listView1.Columns.Add("Tamanho (KB)", 100);
-            listView1.Columns.Add("Data de Modifica��o", 150);
+            listView1.Columns.Add("Data de Modificação", 150);
 
             try
             {
@@ -161,13 +164,13 @@ namespace MyPlayer
                     listView1.Items.Add(item);
                 }
 
-                // Arquivos � filtra apenas extens�es permitidas
+                // Arquivos — filtra apenas extensões permitidas
                 string[] arquivos = Directory.GetFiles(path);
                 foreach (string arquivo in arquivos)
                 {
                     string extensao = Path.GetExtension(arquivo).ToLowerInvariant();
 
-                    // s� adiciona se a extens�o estiver na lista permitida
+                    // só adiciona se a extensão estiver na lista permitida
                     if (!ExtensoesPermitidas.Contains(extensao))
                         continue;
 
@@ -179,7 +182,7 @@ namespace MyPlayer
 
                     ListViewItem item = new(nome)
                     {
-                        ImageIndex = 2, // �cone de arquivo
+                        ImageIndex = 2, // ícone de arquivo
                         Tag = fi.FullName
                     };
                     item.SubItems.Add((fi.Length / 1024).ToString());
@@ -189,37 +192,216 @@ namespace MyPlayer
             }
             catch (UnauthorizedAccessException)
             {
-                MessageBox.Show("Sem permiss�o para acessar alguns arquivos nesta pasta.");
+                MessageBox.Show("Sem permissão para acessar alguns arquivos nesta pasta.");
             }
 
-            //listView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
+            listView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
         }
-        #endregion
 
-        private List<string> GetListMusicas() {
-            List<string> rt = [];
+        // Retorna as músicas como ListViewItem (usado em UI)
+        private List<ListViewItem> GetListMusicas()
+        {
+            List<ListViewItem> musicas = new();
+
             foreach (ListViewItem item in listView1.Items)
             {
                 if (item.Tag == null) continue;
 
-                string? path = item?.Tag?.ToString();
-                if (string.IsNullOrEmpty(path) || !File.Exists(path)) { continue; }
+                string? path = item.Tag.ToString();
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) continue;
 
-                // Verifica se � arquivo e se a extens�o � permitida
                 string ext = Path.GetExtension(path).ToLowerInvariant();
-                if (!ExtensoesPermitidas.Contains(ext)) { continue; }
-                rt.Add(path);
+                if (!ExtensoesPermitidas.Contains(ext)) continue;
+
+                musicas.Add(item);
             }
-            return rt;
+
+            return musicas;
         }
 
+        // 🔁 Sobrecarga — retorna apenas os caminhos (List<string>)
+        private List<string> GetListMusicasPaths()
+        {
+            return GetListMusicas()
+                .Select(i => i.Tag?.ToString())
+                .Where(p => !string.IsNullOrEmpty(p))
+                .ToList()!;
+        }
+
+
+        #endregion
+
+
+        #region botoes
         private void button1_Click(object sender, EventArgs e)
         {
-            foreach (string m in GetListMusicas())
+            foreach (string m in GetListMusicasPaths())
             {
                 Console.WriteLine(m);
             }
         }
+
+
+        private void btnRandomizar_Click(object sender, EventArgs e)
+        {
+            List<ListViewItem> musicas = GetListMusicas();
+            if (musicas.Count == 0)
+            {
+                return;
+            }
+
+            // Embaralha usando seu método Fisher–Yates
+            Util.Shuffle(musicas);
+
+            // Mantém as pastas no topo (opcional)
+            //List<ListViewItem> pastas = listView1.Items
+            //    .Cast<ListViewItem>()
+            //    .Where(i => i.Tag is string p && Directory.Exists(p))
+            //    .ToList();
+
+            listView1.BeginUpdate();
+            listView1.Items.Clear();
+
+            //foreach (var pasta in pastas) listView1.Items.Add((ListViewItem)pasta.Clone());
+            foreach (var musica in musicas) listView1.Items.Add((ListViewItem)musica.Clone());
+
+            listView1.EndUpdate();
+        }
+
+        // TODO: temporário
+        private bool isplaying = false;
+        private int indiceMusica = 0;
+        private Task? playerTask = null;
+        private bool skipToNext = false;
+
+
+        private void btnVoltar_Click(object sender, EventArgs e)
+        {
+            if (listView1.Items.Count == 0) return;
+
+            // Retrocede o índice
+            indiceMusica--;
+            if (indiceMusica < 0)
+                indiceMusica = listView1.Items.Count - 1;
+
+            if (isplaying)
+            {
+                // Se estiver tocando, sinaliza para o loop ir imediatamente para a música anterior
+                skipToNext = true; // reutiliza o skip flag
+            }
+
+            // Atualiza seleção na UI
+            AtualizarSelecaoMusicaAtual();
+        }
+
+
+
+
+        private void btnPlayPause_Click(object sender, EventArgs e)
+        {
+            if (listView1.Items.Count <= 0) return;
+
+            isplaying = !isplaying;
+            updateBtnPlayPause();
+
+            if (isplaying && (playerTask == null || playerTask.IsCompleted))
+            {
+                playerTask = playMusic();
+            }
+        }
+
+        private void btnProximo_Click(object sender, EventArgs e)
+        {
+            if (!isplaying)
+            {
+                // se o player estiver pausado, apenas muda a seleção
+                indiceMusica++;
+                var musicas = GetListMusicas();
+                if (indiceMusica >= musicas.Count)
+                    indiceMusica = 0;
+                AtualizarSelecaoMusicaAtual();
+                return;
+            }
+
+            // se estiver tocando, apenas sinaliza o salto
+            skipToNext = true;
+        }
+
+
+        private void AtualizarSelecaoMusicaAtual()
+        {
+            List<ListViewItem> musicas = GetListMusicas();
+            if (musicas.Count == 0 || indiceMusica < 0 || indiceMusica >= musicas.Count)
+                return;
+
+            var itemAtual = musicas[indiceMusica];
+
+            InvokeAux.SetValue(listView1, c => {
+                ((ListView)c).SelectedItems.Clear();
+                itemAtual.Selected = true;
+                itemAtual.EnsureVisible();
+            });
+        }
+
+
+
+        private void updateBtnPlayPause() {
+            if (listView1.Items.Count <= 0)
+            {
+                isplaying = false;
+                btnPlayPause.Text = ">";
+                return;
+            }
+            btnPlayPause.Text = isplaying ? "||" : ">";
+        }
+
+        private async Task playMusic()
+        {
+            List<ListViewItem> musicas = GetListMusicas();
+            if (musicas.Count == 0) return;
+
+            isplaying = true;
+
+            while (isplaying)
+            {
+                if (indiceMusica >= musicas.Count)
+                    indiceMusica = 0;
+
+                ListViewItem itemAtual = musicas[indiceMusica];
+                string? path = itemAtual.Tag?.ToString();
+
+                Console.WriteLine($"🎵 Tocando música: {indiceMusica}, {path}");
+
+                // Atualiza seleção visual
+                AtualizarSelecaoMusicaAtual();
+
+                // Simula "reprodução" com checagem frequente de pausa/skip
+                for (int i = 0; i < 10 && isplaying && !skipToNext; i++)
+                    await Task.Delay(100);
+
+                if (!isplaying)
+                    break;
+
+                if (skipToNext)
+                {
+                    Console.WriteLine($"⏭ Pulando música {indiceMusica}...");
+                    skipToNext = false;
+                }
+                else
+                {
+                    Console.WriteLine($"⏹ Música {indiceMusica} terminou...");
+                }
+
+                indiceMusica++;
+            }
+
+            Console.WriteLine("▶️ Reprodução pausada ou finalizada.");
+        }
+
+
+
+        #endregion
+
 
     }
 }
