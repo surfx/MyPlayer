@@ -19,7 +19,6 @@ namespace MyPlayer
         private List<ListViewItem>? _musicas = null;
 
         private int _indiceMusica = 0;
-        private Task? _playerTask = null;
         private bool _skipToNext = false;
         private bool _skipToPrevious = false;
         private PlayerControl? _playerControl;
@@ -37,16 +36,22 @@ namespace MyPlayer
 #endif
 
             string musicPath = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
-            txtPathMusicas.Text = musicPath.EndsWith(@"\") ? musicPath : musicPath + @"\";
-            PreencherTreeView(treeView1, txtPathMusicas.Text);
+            musicPath = musicPath.EndsWith(@"\") ? musicPath : musicPath + @"\";
+            InvokeAux.SetValue(txtPathMusicas, c => ((TextBox)c).Text = musicPath);
+            PreencherTreeView(treeView1, musicPath);
 
-            lblStatus.Text = string.Empty;
-            progressBar1.Minimum = 0;
-            progressBar1.Maximum = 100;
-
-            trackBar1.Minimum = 0;
-            trackBar1.Maximum = 100;
-            trackBar1.TickStyle = TickStyle.None;
+            InvokeAux.SetValue(lblStatus, c => ((Label)c).Text = string.Empty);
+            InvokeAux.SetValue(progressBar1, c => {
+                ProgressBar pg = (ProgressBar)c;
+                pg.Minimum = 0; 
+                pg.Maximum = 100;
+            });
+            InvokeAux.SetValue(trackBar1, c => {
+                TrackBar tckbar = (TrackBar)c;
+                tckbar.Minimum = 0;
+                tckbar.Maximum = 100;
+                tckbar.TickStyle = TickStyle.None;
+            });
         }
 
         private void btnOpenFolderMusics_Click(object sender, EventArgs e)
@@ -167,7 +172,7 @@ namespace MyPlayer
 
             // Cria e conecta o novo player
             _playerControl = new PlayerControl(path);
-            _playerControl.ProgressUpdated += Player_ProgressUpdated;
+            _playerControl.EvtProgressUpdated += Player_ProgressUpdated;
             _playerControl.EvtPlaying += Player_EvtPlaying;
             _playerControl.EvtStop += Player_EvtStop;
 
@@ -255,22 +260,24 @@ namespace MyPlayer
         // Retorna as músicas como ListViewItem (usado em UI)
         private List<ListViewItem> GetListMusicas()
         {
-            List<ListViewItem> musicas = new();
+            return InvokeAux.GetValue<List<ListViewItem>>(listView1, c =>
+                {
+                    List<ListViewItem> rt = new();
+                    ListView lv = (ListView)c;
+                    foreach (ListViewItem item in listView1.Items)
+                    {
+                        if (item.Tag == null) continue;
 
-            foreach (ListViewItem item in listView1.Items)
-            {
-                if (item.Tag == null) continue;
+                        string? path = item.Tag.ToString();
+                        if (string.IsNullOrEmpty(path) || !File.Exists(path)) continue;
 
-                string? path = item.Tag.ToString();
-                if (string.IsNullOrEmpty(path) || !File.Exists(path)) continue;
+                        string ext = Path.GetExtension(path).ToLowerInvariant();
+                        if (!ExtensoesPermitidas.Contains(ext)) continue;
 
-                string ext = Path.GetExtension(path).ToLowerInvariant();
-                if (!ExtensoesPermitidas.Contains(ext)) continue;
-
-                musicas.Add(item);
-            }
-
-            return musicas;
+                        rt.Add(item);
+                    }
+                    return rt;
+                });
         }
 
         // 🔁 Sobrecarga — retorna apenas os caminhos (List<string>)
@@ -321,7 +328,11 @@ namespace MyPlayer
 
         private void btnPlayPause_Click(object sender, EventArgs e)
         {
-            if (listView1.Items.Count <= 0) return;
+            if (listView1.Items.Count <= 0) {
+                if (_playerControl != null) { _playerControl.Pause(); }
+                btnPlayPause.Text = ">";
+                return;
+            } 
 
             if (_playerControl != null)
             {
@@ -334,29 +345,9 @@ namespace MyPlayer
                     _playerControl.Resume();
                 }
             }
-            //isplaying = !isplaying;
-            updateBtnPlayPause();
-
-            //if (isplaying && (_playerTask == null || _playerTask.IsCompleted))
-            //if ((_playerControl != null && _playerControl.IsPlaying) && (_playerTask == null || _playerTask.IsCompleted))
-            //{
-            //    _playerTask = playMusic();
-            //}
-            _playerTask = playMusic();
-        }
-        private void updateBtnPlayPause()
-        {
-            if (listView1.Items.Count <= 0)
-            {
-                if (_playerControl != null) { _playerControl.Pause(); }
-                //isplaying = false;
-                btnPlayPause.Text = ">";
-                return;
-            }
-            //btnPlayPause.Text = isplaying ? "||" : ">";
             btnPlayPause.Text = (_playerControl != null && _playerControl.IsPlaying) ? "||" : ">";
+            //_ = playMusic();
         }
-
 
         private void btnProximo_Click(object sender, EventArgs e)
         {
@@ -399,7 +390,7 @@ namespace MyPlayer
 
             _playerControl?.Dispose();
             _playerControl = new PlayerControl(path);
-            _playerControl.ProgressUpdated += Player_ProgressUpdated;
+            _playerControl.EvtProgressUpdated += Player_ProgressUpdated;
             _playerControl.EvtPlaying += Player_EvtPlaying;
             _playerControl.EvtStop += Player_EvtStop;
             _playerControl.Play();
@@ -412,9 +403,12 @@ namespace MyPlayer
             // Simula "reprodução" com checagem frequente de pausa/skip
             // for (int i = 0; i < 10 && isplaying && !_skipToNext && !_skipToPrevious; i++)
             //for (int i = 0; i < 10 && (_playerControl != null && _playerControl.IsPlaying) && !_skipToNext && !_skipToPrevious; i++)
+
+            // obs: existe o estado MusicaFinalizada, que retorna true em _playerControl.IsPlaying
             await Util.WaitWhileAsync(() =>
                 _playerControl != null &&
                 _playerControl.IsPlaying &&
+                _playerControl.EstadoPlayerProp == PlayerControl.EstadoPlayer.Play &&
                 !_skipToNext &&
                 !_skipToPrevious, 100);
 
@@ -422,6 +416,7 @@ namespace MyPlayer
             if (_playerControl == null || !_playerControl.IsPlaying)
             {
                 Console.WriteLine("▶️ Reprodução pausada ou finalizada.");
+                _playerControl?.Stop();
                 return;
             }
 
@@ -447,7 +442,7 @@ namespace MyPlayer
             if (_playerControl != null && _playerControl.IsPlaying)
             {
                 _playerControl?.Stop();
-                _playerTask = playMusic();
+                _ = playMusic();
                 return;
             }
 
@@ -457,54 +452,47 @@ namespace MyPlayer
 
         private void Player_EvtPlaying(object? sender, EventArgs e)
         {
+            // Acessar _playerControl para ler o MusicDuration é seguro aqui, pois é uma propriedade (TimeSpan)
+            // e não um controle da UI.
             if (_playerControl == null) return;
 
-            //_totalTime = _playerControl.MusicDuration; // (veja abaixo)
-            progressBar1.Value = 0;
-            trackBar1.Value = 0;
+            InvokeAux.SetValue(progressBar1, c => ((ProgressBar)c).Value = 0);
+            InvokeAux.SetValue(trackBar1, c => ((TrackBar)c).Value = 0);
 
-            lblStatus.Text = $"00:00 | {_playerControl.MusicDuration:mm\\:ss}";
+            TimeSpan musicDuration = _playerControl.MusicDuration;
+            InvokeAux.SetValue(lblStatus, c => ((Label)c).Text = $"00:00 | {musicDuration:mm\\:ss}");
         }
 
         private void Player_EvtStop(object? sender, EventArgs e)
         {
-            if (InvokeRequired)
-            {
-                Invoke(new Action(() => Player_EvtStop(sender, e)));
-                return;
-            }
-
-            lblStatus.Text = "Parado";
-            progressBar1.Value = 0;
-            trackBar1.Value = 0;
+            InvokeAux.SetValue(lblStatus, c => ((Label)c).Text = "Parado");
+            InvokeAux.SetValue(progressBar1, c => ((ProgressBar)c).Value = 0);
+            InvokeAux.SetValue(trackBar1, c => ((TrackBar)c).Value = 0);
         }
 
         private void Player_ProgressUpdated(object? sender, double percent)
         {
             if (_playerControl == null) return;
 
-            // A atualização da UI precisa ocorrer na thread principal
-            if (InvokeRequired)
-            {
-                Invoke(new Action(() => Player_ProgressUpdated(sender, percent)));
-                return;
-            }
-
+            // Use InvokeAux para definir os valores na thread da UI
             if (percent >= 0 && percent <= 100)
             {
-                progressBar1.Value = (int)percent;
-                trackBar1.Value = (int)percent;
+                InvokeAux.SetValue(progressBar1, c => ((ProgressBar)c).Value = (int)percent);
+                InvokeAux.SetValue(trackBar1, c => ((TrackBar)c).Value = (int)percent);
             }
 
-            var current = _playerControl.CurrentTime;
-            lblStatus.Text = $"{current:mm\\:ss} | {_playerControl.MusicDuration:mm\\:ss}";
+            // Atualiza o texto do status label
+            // Novamente, capture CurrentTime e MusicDuration ANTES de chamar SetValue
+            // para simplificar o lambda.
+            TimeSpan currentTime = _playerControl.CurrentTime;
+            TimeSpan musicDuration = _playerControl.MusicDuration;
+            InvokeAux.SetValue(lblStatus, c => ((Label)c).Text = $"{currentTime:mm\\:ss} | {musicDuration:mm\\:ss}");
         }
 
         private void trackBar1_Scroll(object sender, EventArgs e)
         {
             if (_playerControl == null) return;
-            double percent = trackBar1.Value;
-            _playerControl.SetPercent(percent);
+            _playerControl.SetPercent(InvokeAux.GetValue<double>(trackBar1, c => ((TrackBar)c).Value));
         }
 
         private void analiseIndiceMusica(bool avancar = true)
@@ -521,9 +509,6 @@ namespace MyPlayer
         }
 
         #endregion
-
-
-
 
     }
 }

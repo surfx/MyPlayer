@@ -5,14 +5,27 @@
         private MusicControl musicControl;
         private CancellationTokenSource? cts;
 
-        public event EventHandler<double>? ProgressUpdated;
+        public event EventHandler<double>? EvtProgressUpdated;
         public event EventHandler? EvtPlaying;
         public event EventHandler? EvtPaused;
         public event EventHandler? EvtResume;
         public event EventHandler? EvtStop;
+        public event EventHandler<EstadoPlayer>? EstadoAlterado;
 
-        public bool IsPlaying => musicControl.IsPlaying;
+        public enum EstadoPlayer : ushort
+        {
+            Play = 1,
+            Pause = 2,
+            Stop = 3,
+            MusicaFinalizada = 4
+        }
+
+        public bool IsPlayingMusicControl => musicControl.IsPlaying;
         public bool IsPaused => musicControl.IsPaused;
+
+        public bool IsPlaying => EstadoPlayerProp == EstadoPlayer.Play || EstadoPlayerProp == EstadoPlayer.MusicaFinalizada;
+
+        public EstadoPlayer EstadoPlayerProp { get; set; } = EstadoPlayer.Stop;
 
         public TimeSpan MusicDuration => musicControl?.TotalTime ?? TimeSpan.Zero;
         public TimeSpan CurrentTime => musicControl?.GetCurrentTime() ?? TimeSpan.Zero;
@@ -24,10 +37,10 @@
                 throw new ArgumentException("Arquivo inválido.", nameof(musicPath));
 
             musicControl = new MusicControl(musicPath);
-            if (EvtPlaying != null) musicControl.EvtPlaying += (s, e) => EvtPlaying?.Invoke(s, e);
-            if (EvtPaused != null) musicControl.EvtPaused += (s, e) => EvtPaused?.Invoke(s, e);
-            if (EvtResume != null) musicControl.EvtResume += (s, e) => EvtResume?.Invoke(s, e);
-            if (EvtStop != null) musicControl.EvtStop += (s, e) => EvtStop?.Invoke(s, e);
+            musicControl.EvtPlaying += (s, e) => EvtPlaying?.Invoke(s, e);
+            musicControl.EvtPaused += (s, e) => EvtPaused?.Invoke(s, e);
+            musicControl.EvtResume += (s, e) => EvtResume?.Invoke(s, e);
+            musicControl.EvtStop += (s, e) => EvtStop?.Invoke(s, e);
 
             if (!musicControl.IsValid)
                 throw new InvalidOperationException("Não foi possível inicializar o arquivo de áudio.");
@@ -37,9 +50,11 @@
         {
             if (!musicControl.IsValid) return;
 
-            if (IsPlaying) Stop(); // garante que não há múltiplas execuções
+            if (IsPlayingMusicControl) Stop(); // garante que não há múltiplas execuções
 
             cts = new CancellationTokenSource();
+
+            SetEstado(EstadoPlayer.Play);
 
             Task.Run(async () =>
             {
@@ -49,38 +64,44 @@
                 {
                     while (musicControl.IsPlaying && !cts.Token.IsCancellationRequested)
                     {
-                        ProgressUpdated?.Invoke(this, musicControl.GetProgress());
+                        EvtProgressUpdated?.Invoke(this, musicControl.GetProgress());
                         await Task.Delay(200, cts.Token); // atualiza a cada 200ms
                     }
 
                     // Atualiza progresso final
-                    ProgressUpdated?.Invoke(this, musicControl.GetProgress());
+                    EvtProgressUpdated?.Invoke(this, musicControl.GetProgress());
                 }
                 catch (TaskCanceledException)
                 {
                     // Thread cancelada, ignora
+                }
+                finally
+                {
+                    SetEstado(EstadoPlayer.MusicaFinalizada);
                 }
             });
         }
 
         public void Pause()
         {
-            if (!musicControl.IsValid || !IsPlaying) return;
+            if (!musicControl.IsValid || !IsPlayingMusicControl) return;
             musicControl.Pause();
+            SetEstado(EstadoPlayer.Pause);
         }
 
         public void Resume()
         {
             if (!musicControl.IsValid || !IsPaused) return;
             musicControl.Resume();
+            SetEstado(EstadoPlayer.Play);
         }
 
         public void Stop()
         {
             if (!musicControl.IsValid) return;
-
             musicControl.Stop();
             cts?.Cancel();
+            SetEstado(EstadoPlayer.Stop);
         }
 
         public void Seek(TimeSpan time)
@@ -101,11 +122,19 @@
             musicControl.SetPercent(percent);
         }
 
+        private void SetEstado(EstadoPlayer novo)
+        {
+            if (EstadoPlayerProp == novo) { return; }
+            EstadoPlayerProp = novo;
+            EstadoAlterado?.Invoke(this, novo);
+        }
+
         public void Dispose()
         {
             Stop();
             musicControl.Dispose();
         }
+
     }
 }
 

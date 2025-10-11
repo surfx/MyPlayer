@@ -21,7 +21,6 @@ namespace MyPlayer.classes.player
         public event EventHandler? EvtResume;
         public event EventHandler? EvtStop;
 
-
         public MusicControl(string musicPath)
         {
             if (string.IsNullOrEmpty(musicPath) || !File.Exists(musicPath)) { return; }
