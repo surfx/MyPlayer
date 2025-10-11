@@ -36,11 +36,14 @@
             treeView1 = new TreeView();
             imageList1 = new ImageList(components);
             listView1 = new ListView();
-            button1 = new Button();
             btnRandomizar = new Button();
             btnVoltar = new Button();
             btnPlayPause = new Button();
             btnProximo = new Button();
+            lblStatus = new Label();
+            progressBar1 = new ProgressBar();
+            trackBar1 = new TrackBar();
+            ((System.ComponentModel.ISupportInitialize)trackBar1).BeginInit();
             SuspendLayout();
             // 
             // label1
@@ -98,20 +101,11 @@
             listView1.SmallImageList = imageList1;
             listView1.TabIndex = 4;
             listView1.UseCompatibleStateImageBehavior = false;
-            // 
-            // button1
-            // 
-            button1.Location = new Point(12, 409);
-            button1.Name = "button1";
-            button1.Size = new Size(112, 34);
-            button1.TabIndex = 5;
-            button1.Text = "button1";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click;
+            listView1.DoubleClick += listView1_DoubleClick;
             // 
             // btnRandomizar
             // 
-            btnRandomizar.Location = new Point(146, 409);
+            btnRandomizar.Location = new Point(12, 409);
             btnRandomizar.Name = "btnRandomizar";
             btnRandomizar.Size = new Size(63, 34);
             btnRandomizar.TabIndex = 6;
@@ -121,7 +115,7 @@
             // 
             // btnVoltar
             // 
-            btnVoltar.Location = new Point(215, 409);
+            btnVoltar.Location = new Point(81, 409);
             btnVoltar.Name = "btnVoltar";
             btnVoltar.Size = new Size(41, 34);
             btnVoltar.TabIndex = 7;
@@ -131,7 +125,7 @@
             // 
             // btnPlayPause
             // 
-            btnPlayPause.Location = new Point(262, 409);
+            btnPlayPause.Location = new Point(128, 409);
             btnPlayPause.Name = "btnPlayPause";
             btnPlayPause.Size = new Size(41, 34);
             btnPlayPause.TabIndex = 8;
@@ -141,7 +135,7 @@
             // 
             // btnProximo
             // 
-            btnProximo.Location = new Point(309, 409);
+            btnProximo.Location = new Point(175, 409);
             btnProximo.Name = "btnProximo";
             btnProximo.Size = new Size(41, 34);
             btnProximo.TabIndex = 9;
@@ -149,16 +143,42 @@
             btnProximo.UseVisualStyleBackColor = true;
             btnProximo.Click += btnProximo_Click;
             // 
+            // lblStatus
+            // 
+            lblStatus.AutoSize = true;
+            lblStatus.Location = new Point(762, 414);
+            lblStatus.Name = "lblStatus";
+            lblStatus.Size = new Size(60, 25);
+            lblStatus.TabIndex = 10;
+            lblStatus.Text = "Status";
+            // 
+            // progressBar1
+            // 
+            progressBar1.Location = new Point(930, 409);
+            progressBar1.Name = "progressBar1";
+            progressBar1.Size = new Size(182, 34);
+            progressBar1.TabIndex = 11;
+            // 
+            // trackBar1
+            // 
+            trackBar1.Location = new Point(222, 409);
+            trackBar1.Name = "trackBar1";
+            trackBar1.Size = new Size(505, 69);
+            trackBar1.TabIndex = 12;
+            trackBar1.Scroll += trackBar1_Scroll;
+            // 
             // frmMyPlayer
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1122, 469);
+            ClientSize = new Size(1122, 463);
+            Controls.Add(trackBar1);
+            Controls.Add(progressBar1);
+            Controls.Add(lblStatus);
             Controls.Add(btnProximo);
             Controls.Add(btnPlayPause);
             Controls.Add(btnVoltar);
             Controls.Add(btnRandomizar);
-            Controls.Add(button1);
             Controls.Add(listView1);
             Controls.Add(treeView1);
             Controls.Add(btnOpenFolderMusics);
@@ -169,6 +189,7 @@
             StartPosition = FormStartPosition.CenterScreen;
             Text = "My Player";
             Load += frmMyPlayer_Load;
+            ((System.ComponentModel.ISupportInitialize)trackBar1).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -181,10 +202,12 @@
         private TreeView treeView1;
         private ListView listView1;
         private ImageList imageList1;
-        private Button button1;
         private Button btnRandomizar;
         private Button btnVoltar;
         private Button btnPlayPause;
         private Button btnProximo;
+        private Label lblStatus;
+        private ProgressBar progressBar1;
+        private TrackBar trackBar1;
     }
 }

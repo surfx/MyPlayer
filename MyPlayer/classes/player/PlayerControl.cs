@@ -14,6 +14,10 @@
         public bool IsPlaying => musicControl.IsPlaying;
         public bool IsPaused => musicControl.IsPaused;
 
+        public TimeSpan MusicDuration => musicControl?.TotalTime ?? TimeSpan.Zero;
+        public TimeSpan CurrentTime => musicControl?.GetCurrentTime() ?? TimeSpan.Zero;
+
+
         public PlayerControl(string musicPath)
         {
             if (string.IsNullOrEmpty(musicPath) || !File.Exists(musicPath))

@@ -16,5 +16,11 @@
                 (list[k], list[n]) = (list[n], list[k]);
             }
         }
+
+        public static async Task WaitWhileAsync(Func<bool> condition, int checkIntervalMs = 500)
+        {
+            while (condition())
+                await Task.Delay(checkIntervalMs);
+        }
     }
 }
