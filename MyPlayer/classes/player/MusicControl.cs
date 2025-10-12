@@ -5,12 +5,15 @@ namespace MyPlayer.classes.player
     public class MusicControl : IDisposable
     {
 
-        public bool IsPlaying { get; private set; } = false;
-        public bool IsPaused { get; private set; } = false;
+        private AudioFileReader? _audioFile { get; set; }
+        private WaveOutEvent? _waveOutEvent { get; set; }
 
-        private AudioFileReader? audioFile { get; set; }
-        private WaveOutEvent? waveOutEvent { get; set; }
-        public bool IsValid => audioFile != null && waveOutEvent != null;
+        public PlaybackState? PlaybackStateProp => _waveOutEvent?.PlaybackState;
+        public bool IsPlaying => PlaybackStateProp == PlaybackState.Playing;
+        public bool IsPaused => PlaybackStateProp == PlaybackState.Paused;
+        public bool IsStoped => PlaybackStateProp == PlaybackState.Stopped;
+
+        public bool IsValid => _audioFile != null && _waveOutEvent != null;
 
         public TimeSpan TotalTime { get; private set; }
 
@@ -24,17 +27,18 @@ namespace MyPlayer.classes.player
         public MusicControl(string musicPath)
         {
             if (string.IsNullOrEmpty(musicPath) || !File.Exists(musicPath)) { return; }
-            audioFile = new AudioFileReader(musicPath);
-            waveOutEvent = new WaveOutEvent();
+            _audioFile = new AudioFileReader(musicPath);
+            _waveOutEvent = new WaveOutEvent();
             if (!IsValid) { return; }
-            waveOutEvent.Init(audioFile);
-            IsPlaying = IsPaused = false;
+            _waveOutEvent.Init(_audioFile);
+            //IsPlaying = IsPaused = false;
 
-            TotalTime = audioFile.TotalTime;
-            waveOutEvent.PlaybackStopped += (s, e) =>
+            TotalTime = _audioFile.TotalTime;
+            _waveOutEvent.PlaybackStopped += (s, e) =>
             {
-                IsPlaying = false;
-                IsPaused = false;
+                //IsPlaying = false;
+                //IsPaused = false;
+                EvtStop?.Invoke(this, e);
             };
         }
 
@@ -42,20 +46,20 @@ namespace MyPlayer.classes.player
         public double GetProgress()
         {
             if (!IsValid || TotalTime.TotalSeconds <= 0) return 0.0;
-            return (audioFile!.CurrentTime.TotalSeconds / TotalTime.TotalSeconds) * 100;
+            return (_audioFile!.CurrentTime.TotalSeconds / TotalTime.TotalSeconds) * 100;
         }
 
-        public TimeSpan GetCurrentTime() => !IsValid ? TimeSpan.Zero : audioFile!.CurrentTime;
-        public long GetMaxPosition() => !IsValid ? 0 : audioFile!.Length;
+        public TimeSpan GetCurrentTime() => !IsValid ? TimeSpan.Zero : _audioFile!.CurrentTime;
+        public long GetMaxPosition() => !IsValid ? 0 : _audioFile!.Length;
 
         #region music control
 
         public void Play()
         {
             if (!IsValid) { return; }
-            waveOutEvent!.Play();
-            IsPlaying = true;
-            IsPaused = false;
+            _waveOutEvent!.Play();
+            //IsPlaying = true;
+            //IsPaused = false;
 
             EvtPlaying?.Invoke(this, EventArgs.Empty);
         }
@@ -63,9 +67,9 @@ namespace MyPlayer.classes.player
         public void Pause()
         {
             if (!IsValid || !IsPlaying) { return; }
-            waveOutEvent!.Pause();
-            IsPaused = true;
-            IsPlaying = false;
+            _waveOutEvent!.Pause();
+            //IsPaused = true;
+            //IsPlaying = false;
 
             EvtPaused?.Invoke(this, EventArgs.Empty);
         }
@@ -73,21 +77,21 @@ namespace MyPlayer.classes.player
         public void Resume()
         {
             if (!IsValid || !IsPaused) { return; }
-            waveOutEvent!.Play();
-            IsPaused = false;
-            IsPlaying = true;
+            _waveOutEvent!.Play();
+            //IsPaused = false;
+            //IsPlaying = true;
 
             EvtResume?.Invoke(this, EventArgs.Empty);
         }
 
         public void Stop()
         {
-            IsPlaying = false;
-            IsPaused = false;
+            //IsPlaying = false;
+            //IsPaused = false;
 
             if (!IsValid) { return; }
-            waveOutEvent!.Stop();
-            audioFile!.Position = 0;
+            if (_waveOutEvent != null) _waveOutEvent.Stop();
+            try { if (_audioFile != null) _audioFile.Position = 0; } catch (Exception) { }
 
             EvtStop?.Invoke(this, EventArgs.Empty);
         }
@@ -96,8 +100,8 @@ namespace MyPlayer.classes.player
         {
             if (!IsValid) { return; }
             time = time < TimeSpan.Zero ? TimeSpan.Zero : time;
-            time = time > audioFile!.TotalTime ? audioFile.TotalTime : time;
-            audioFile!.CurrentTime = time;
+            time = time > _audioFile!.TotalTime ? _audioFile.TotalTime : time;
+            _audioFile!.CurrentTime = time;
         }
 
         /**
@@ -106,17 +110,17 @@ namespace MyPlayer.classes.player
         public void SetPosition(long position)
         {
             if (!IsValid || position < 0) { return; }
-            position = Math.Min(position, audioFile!.Length);
-            audioFile!.Position = position;
+            position = Math.Min(position, _audioFile!.Length);
+            _audioFile!.Position = position;
         }
 
         public void SetPercent(double percent)
         {
-            if (!IsValid) return;
+            if (!IsValid || _audioFile == null) return;
             percent = Math.Clamp(percent, 0, 100);
             var targetTime = TimeSpan.FromSeconds(TotalTime.TotalSeconds * (percent / 100.0));
             // Garante que o tempo não ultrapasse o total
-            audioFile!.CurrentTime = targetTime > TotalTime ? TotalTime : targetTime;
+            _audioFile.CurrentTime = targetTime > TotalTime ? TotalTime : targetTime;
         }
 
         #endregion
@@ -136,8 +140,8 @@ namespace MyPlayer.classes.player
             if (disposing)
             {
                 // Libera recursos gerenciados
-                waveOutEvent?.Dispose();
-                audioFile?.Dispose();
+                _waveOutEvent?.Dispose();
+                _audioFile?.Dispose();
             }
 
             disposed = true;

@@ -1,5 +1,6 @@
 ﻿#define DEBUG
 
+using MyPlayer.classes.controleestados;
 using MyPlayer.classes.player;
 using MyPlayer.classes.util;
 using MyPlayer.classes.util.threads;
@@ -17,12 +18,14 @@ namespace MyPlayer
         private static readonly string[] ExtensoesPermitidas = [".mp3", ".mp4", ".wav", ".flac", ".aac", ".wma"];
 
         private List<ListViewItem>? _musicas = null;
+        private readonly ControleEstados _controleEstados = new();
+
 
         private int _indiceMusica = 0;
         private bool _skipToNext = false;
         private bool _skipToPrevious = false;
         private PlayerControl? _playerControl;
-        //private bool isplaying = false;
+        private bool listViewDblClick = false;
 
         public frmMyPlayer()
         {
@@ -35,77 +38,231 @@ namespace MyPlayer
             AllocConsole();
 #endif
 
-            string musicPath = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
-            musicPath = musicPath.EndsWith(@"\") ? musicPath : musicPath + @"\";
-            InvokeAux.SetValue(txtPathMusicas, txt => txt.Text = musicPath);
-            PreencherTreeView(treeView1, musicPath);
-
-            InvokeAux.SetValue(lblStatus, lbl => lbl.Text = string.Empty);
-            InvokeAux.SetValue(progressBar1, pg => {
-                pg.Minimum = 0; 
+            InvokeAux.Access(lblStatus, lbl => lbl.Text = string.Empty);
+            InvokeAux.Access(progressBar1, pg =>
+            {
+                pg.Minimum = 0;
                 pg.Maximum = 100;
             });
-            InvokeAux.SetValue(trackBar1, tckbar => {
+            InvokeAux.Access(trackBar1, tckbar =>
+            {
                 tckbar.Minimum = 0;
                 tckbar.Maximum = 100;
                 tckbar.TickStyle = TickStyle.None;
             });
+
+            updateContextMenuStrip();
+
+            _skipToNext = _skipToPrevious = false;
+
+            var estado = _controleEstados.RecuperarEstado(listView1);
+            if (estado != null)
+            {
+                _indiceMusica = estado.IndiceMusica;
+
+                InvokeAux.Access(listView1, lvw =>
+                {
+                    lvw.BeginUpdate();
+                    lvw.Items.Clear();
+                    lvw.View = View.Details; // importante restaurar a View
+                    lvw.SmallImageList = imageList1;
+
+                    // Restaurar colunas se quiser
+                    lvw.Columns.Clear();
+                    lvw.Columns.Add("Nome", 150);
+                    lvw.Columns.Add("Tamanho (KB)", 100);
+                    lvw.Columns.Add("Data de Modificação", 150);
+
+                    _musicas = new List<ListViewItem>();
+                    foreach (var sItem in estado.Musicas)
+                    {
+                        ListViewItem item = new(sItem.Text)
+                        {
+                            Tag = sItem.Tag,
+                            ImageIndex = sItem.ImageIndex
+                        };
+                        foreach (var sub in sItem.SubItems)
+                            item.SubItems.Add((ListViewItem.ListViewSubItem)sub);
+
+                        lvw.Items.Add(item);
+                        _musicas.Add(item); // atualiza a lista interna
+                    }
+
+                    lvw.EndUpdate();
+                });
+
+                AtualizarSelecaoMusicaAtual();
+
+                if (!string.IsNullOrEmpty(estado.MusicPath))
+                    InvokeAux.Access(txtPathMusicas, txt => txt.Text = estado.MusicPath);
+
+                return;
+            }
+
+            string musicPath = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
+            musicPath = musicPath.EndsWith(@"\") ? musicPath : musicPath + @"\";
+            InvokeAux.Access(txtPathMusicas, txt => txt.Text = musicPath);
+            PreencherTreeView(treeView1, musicPath);
+        }
+
+        private void frmMyPlayer_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            _musicas ??= GetListMusicas();
+
+            var estado = new FormularioEstado
+            {
+                MusicPath = InvokeAux.GetValue(txtPathMusicas, txt => txt.Text),
+                IndiceMusica = _indiceMusica,
+                Musicas = _musicas
+            };
+
+            _controleEstados.SalvarEstado(estado, listView1);
         }
 
         private void btnOpenFolderMusics_Click(object sender, EventArgs e)
         {
+            InvokeAux.Access(listView1, lvw => lvw.Items.Clear());
+
             using (FolderBrowserDialog folderDialog = new())
             {
-                if (!string.IsNullOrEmpty(txtPathMusicas.Text)) { folderDialog.SelectedPath = txtPathMusicas.Text; }
+                if (!string.IsNullOrEmpty(InvokeAux.GetValue(txtPathMusicas, txt => txt.Text))) { folderDialog.SelectedPath = InvokeAux.GetValue(txtPathMusicas, txt => txt.Text); }
                 DialogResult result = folderDialog.ShowDialog();
                 if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(folderDialog.SelectedPath))
                 {
-                    txtPathMusicas.Text = folderDialog.SelectedPath.EndsWith(@"\") ? folderDialog.SelectedPath : folderDialog.SelectedPath + @"\";
-                    PreencherTreeView(treeView1, txtPathMusicas.Text);
+                    InvokeAux.Access(txtPathMusicas, txt =>
+                    {
+                        txt.Text = folderDialog.SelectedPath.EndsWith(@"\") ? folderDialog.SelectedPath : folderDialog.SelectedPath + @"\";
+                        PreencherTreeView(treeView1, txt.Text);
+                    });
                 }
             }
         }
 
+        #region ContextMenuStrip
+        private void updateContextMenuStrip()
+        {
+            var abrirPasta = new ToolStripMenuItem("Abrir pasta onde está o arquivo");
+            var copiarCaminho = new ToolStripMenuItem("Copiar caminho do arquivo");
+            var deletarArquivo = new ToolStripMenuItem("Deletar arquivo");
+
+            abrirPasta.Click += AbrirPasta_Click;
+            copiarCaminho.Click += CopiarCaminho_Click;
+            deletarArquivo.Click += DeletarArquivo_Click;
+
+            contextMenuStrip1.Items.AddRange(new ToolStripItem[]
+            {
+                abrirPasta,
+                copiarCaminho,
+                deletarArquivo
+            });
+
+        }
+
+        private void AbrirPasta_Click(object? sender, EventArgs e)
+        {
+            if (InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems.Count) == 0) return;
+            string? caminho = InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems[0].Tag?.ToString());
+            if (string.IsNullOrEmpty(caminho)) return;
+
+            if (File.Exists(caminho))
+            {
+                string? pasta = Path.GetDirectoryName(caminho);
+                if (pasta != null)
+                    System.Diagnostics.Process.Start("explorer.exe", pasta);
+            }
+            else if (Directory.Exists(caminho))
+            {
+                System.Diagnostics.Process.Start("explorer.exe", caminho);
+            }
+        }
+
+        private void CopiarCaminho_Click(object? sender, EventArgs e)
+        {
+            if (InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems.Count) == 0) return;
+            string? caminho = InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems[0].Tag?.ToString());
+            if (!string.IsNullOrEmpty(caminho))
+            {
+                Clipboard.SetText(caminho);
+            }
+        }
+
+        private void DeletarArquivo_Click(object? sender, EventArgs e)
+        {
+            if (InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems.Count) == 0) return;
+            string? caminho = InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems[0].Tag?.ToString());
+            if (string.IsNullOrEmpty(caminho) || !File.Exists(caminho)) return;
+
+            var nome = Path.GetFileName(caminho);
+            var result = MessageBox.Show(
+                $"Tem certeza que deseja deletar o arquivo:\n\n{nome}?",
+                "Confirmar exclusão",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    _playerControl?.Stop();
+
+                    File.Delete(caminho);
+                    InvokeAux.Access(listView1, lvw => lvw.Items.Remove(listView1.SelectedItems[0]));
+                    MessageBox.Show("Arquivo deletado com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Erro ao deletar o arquivo:\n{ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+        #endregion
+
         #region treeview
         public void PreencherTreeView(TreeView treeView, string path)
         {
-            treeView.Nodes.Clear(); // Limpa a árvore
-
-            // Obter todos os níveis acima do caminho fornecido
-            string[] partes = path.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
-            string acumulador = path.StartsWith(Path.DirectorySeparatorChar.ToString()) ? Path.DirectorySeparatorChar.ToString() : partes[0] + @"\";
-
-            TreeNode? currentNode = null;
-
-            for (int i = 0; i < partes.Length; i++)
+            InvokeAux.Access(treeView, tv =>
             {
-                string nome = partes[i];
-                TreeNode node = new(nome) { Tag = acumulador };
+                tv.Nodes.Clear(); // Limpa a árvore
 
-                if (currentNode == null)
+                // Obter todos os níveis acima do caminho fornecido
+                string[] partes = path.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+                string acumulador = path.StartsWith(Path.DirectorySeparatorChar.ToString()) ? Path.DirectorySeparatorChar.ToString() : partes[0] + @"\";
+
+                TreeNode? currentNode = null;
+
+                for (int i = 0; i < partes.Length; i++)
                 {
-                    treeView.Nodes.Add(node);
+                    string nome = partes[i];
+                    TreeNode node = new(nome) { Tag = acumulador };
+
+                    if (currentNode == null)
+                    {
+                        tv.Nodes.Add(node);
+                    }
+                    else
+                    {
+                        currentNode.Nodes.Add(node);
+                    }
+
+                    currentNode = node;
+
+                    if (i < partes.Length - 1)
+                    {
+                        acumulador = Path.Combine(acumulador, partes[i + 1]);
+                    }
                 }
-                else
+
+                // Agora currentNode é o nó raiz da pasta fornecida
+                if (Directory.Exists(path) && currentNode != null)
                 {
-                    currentNode.Nodes.Add(node);
+                    AdicionarPastasRecursivamente(currentNode, path);
+
+                    ListarArquivos(path);
                 }
 
-                currentNode = node;
-
-                if (i < partes.Length - 1)
-                {
-                    acumulador = Path.Combine(acumulador, partes[i + 1]);
-                }
-            }
-
-            // Agora currentNode é o nó raiz da pasta fornecida
-            if (Directory.Exists(path) && currentNode != null)
-            {
-                AdicionarPastasRecursivamente(currentNode, path);
-            }
-
-            treeView.ExpandAll(); // Expande todos os nós
+                tv.ExpandAll(); // Expande todos os nós
+            });
         }
 
         private void AdicionarPastasRecursivamente(TreeNode node, string path)
@@ -151,108 +308,111 @@ namespace MyPlayer
 
         private void listView1_DoubleClick(object sender, EventArgs e)
         {
-            if (listView1.SelectedItems.Count == 0)
-                return;
+            if (InvokeAux.GetValue(listView1, lvw => listView1.SelectedItems.Count) == 0) return;
+
+            listViewDblClick = true;
 
             // Atualiza o índice atual
-            _indiceMusica = listView1.SelectedItems[0].Index;
+            _indiceMusica = InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems[0].Index);
+            _playerControl?.Stop();
 
-            // Obtém o caminho do arquivo (armazenado no Tag)
-            string? path = listView1.SelectedItems[0].Tag as string;
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            if (_playerControl == null || !_playerControl.IsValid)
             {
-                MessageBox.Show("Arquivo de música inválido.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
+                playMusic();
             }
+        }
 
-            // Libera o player anterior (caso exista)
-            _playerControl?.Dispose();
-
-            // Cria e conecta o novo player
-            _playerControl = new PlayerControl(path);
-            _playerControl.EvtProgressUpdated += Player_ProgressUpdated;
-            _playerControl.EvtPlaying += Player_EvtPlaying;
-            _playerControl.EvtStop += Player_EvtStop;
-
-            // Inicia a reprodução
-            _playerControl.Play();
-
-            // Atualiza UI
-            lblStatus.Text = $"Tocando: {Path.GetFileName(path)}";
-            AtualizarSelecaoMusicaAtual();
+        private void listView1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                var info = InvokeAux.GetValue(listView1, lvw => lvw.HitTest(e.Location));
+                if (info.Item != null)
+                {
+                    info.Item.Selected = true;
+                }
+                else
+                {
+                    // se clicar em área vazia
+                    InvokeAux.Access(listView1, lvw => lvw.SelectedItems.Clear());
+                }
+            }
         }
 
         private void ListarArquivos(string path)
         {
             const int maxFileStr = 100;
 
-            listView1.Items.Clear();
-
-            // Configuração inicial do ListView
-            listView1.View = View.Details;
-            listView1.SmallImageList = imageList1;
-            listView1.Columns.Clear();
-            listView1.Columns.Add("Nome", 150);
-            listView1.Columns.Add("Tamanho (KB)", 100);
-            listView1.Columns.Add("Data de Modificação", 150);
-
-            try
+            InvokeAux.Access(listView1, lvw =>
             {
-                // Pastas
-                string[] pastas = Directory.GetDirectories(path);
-                foreach (string pasta in pastas)
+                lvw.Items.Clear();
+
+                // Configuração inicial do ListView
+                lvw.View = View.Details;
+                lvw.SmallImageList = imageList1;
+                lvw.Columns.Clear();
+                lvw.Columns.Add("Nome", 150);
+                lvw.Columns.Add("Tamanho (KB)", 100);
+                lvw.Columns.Add("Data de Modificação", 150);
+
+                try
                 {
-                    DirectoryInfo di = new(pasta);
-                    string nome = di.Name;
-
-                    if (nome.Length > maxFileStr)
-                        nome = nome.Substring(0, maxFileStr) + "...";
-
-                    ListViewItem item = new(nome)
+                    // Pastas
+                    string[] pastas = Directory.GetDirectories(path);
+                    foreach (string pasta in pastas)
                     {
-                        ImageIndex = 0, // folder fechado
-                        Tag = di.FullName
-                    };
-                    item.SubItems.Add(""); // tamanho vazio para pastas
-                    item.SubItems.Add(di.LastWriteTime.ToString());
-                    listView1.Items.Add(item);
+                        DirectoryInfo di = new(pasta);
+                        string nome = di.Name;
+
+                        if (nome.Length > maxFileStr)
+                            nome = nome.Substring(0, maxFileStr) + "...";
+
+                        ListViewItem item = new(nome)
+                        {
+                            ImageIndex = 0, // folder fechado
+                            Tag = di.FullName
+                        };
+                        item.SubItems.Add(""); // tamanho vazio para pastas
+                        item.SubItems.Add(di.LastWriteTime.ToString());
+                        lvw.Items.Add(item);
+                    }
+
+                    // Arquivos — filtra apenas extensões permitidas
+                    string[] arquivos = Directory.GetFiles(path);
+                    foreach (string arquivo in arquivos)
+                    {
+                        string extensao = Path.GetExtension(arquivo).ToLowerInvariant();
+
+                        // só adiciona se a extensão estiver na lista permitida
+                        if (!ExtensoesPermitidas.Contains(extensao))
+                            continue;
+
+                        FileInfo fi = new(arquivo);
+                        string nome = fi.Name;
+
+                        if (nome.Length > maxFileStr)
+                            nome = nome.Substring(0, maxFileStr) + "...";
+
+                        ListViewItem item = new(nome)
+                        {
+                            ImageIndex = 2, // ícone de arquivo
+                            Tag = fi.FullName
+                        };
+                        item.SubItems.Add((fi.Length / 1024).ToString());
+                        item.SubItems.Add(fi.LastWriteTime.ToString());
+                        lvw.Items.Add(item);
+                    }
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    MessageBox.Show("Sem permissão para acessar alguns arquivos nesta pasta.");
                 }
 
-                // Arquivos — filtra apenas extensões permitidas
-                string[] arquivos = Directory.GetFiles(path);
-                foreach (string arquivo in arquivos)
-                {
-                    string extensao = Path.GetExtension(arquivo).ToLowerInvariant();
+                lvw.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
 
-                    // só adiciona se a extensão estiver na lista permitida
-                    if (!ExtensoesPermitidas.Contains(extensao))
-                        continue;
-
-                    FileInfo fi = new(arquivo);
-                    string nome = fi.Name;
-
-                    if (nome.Length > maxFileStr)
-                        nome = nome.Substring(0, maxFileStr) + "...";
-
-                    ListViewItem item = new(nome)
-                    {
-                        ImageIndex = 2, // ícone de arquivo
-                        Tag = fi.FullName
-                    };
-                    item.SubItems.Add((fi.Length / 1024).ToString());
-                    item.SubItems.Add(fi.LastWriteTime.ToString());
-                    listView1.Items.Add(item);
-                }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                MessageBox.Show("Sem permissão para acessar alguns arquivos nesta pasta.");
-            }
-
-            listView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
-
-            // atualiza a lista de musicas
-            _musicas = GetListMusicas();
+                // atualiza a lista de musicas
+                _musicas = GetListMusicas();
+            });
         }
 
         // Retorna as músicas como ListViewItem (usado em UI)
@@ -260,7 +420,7 @@ namespace MyPlayer
         {
             return InvokeAux.GetValue(listView1, lv =>
                 {
-                    List<ListViewItem> rt = new();
+                    List<ListViewItem> rt = [];
                     foreach (ListViewItem item in listView1.Items)
                     {
                         if (item.Tag == null) continue;
@@ -299,6 +459,7 @@ namespace MyPlayer
 
             // Embaralha usando seu método Fisher–Yates
             Util.Shuffle(_musicas);
+            _skipToNext = _skipToPrevious = false;
 
             // Mantém as pastas no topo (opcional)
             //List<ListViewItem> pastas = listView1.Items
@@ -306,39 +467,52 @@ namespace MyPlayer
             //    .Where(i => i.Tag is string p && Directory.Exists(p))
             //    .ToList();
 
-            listView1.BeginUpdate();
-            listView1.Items.Clear();
+            InvokeAux.Access(listView1, lvw =>
+            {
+                lvw.BeginUpdate();
+                lvw.Items.Clear();
 
-            //foreach (var pasta in pastas) listView1.Items.Add((ListViewItem)pasta.Clone());
-            foreach (var musica in _musicas) listView1.Items.Add((ListViewItem)musica.Clone());
-            _musicas = GetListMusicas(); // atualiza
+                //foreach (var pasta in pastas) lv.Items.Add((ListViewItem)pasta.Clone());
+                foreach (var musica in _musicas) lvw.Items.Add((ListViewItem)musica.Clone());
 
-            listView1.EndUpdate();
+                _musicas = GetListMusicas();
+                lvw.EndUpdate();
+            });
+
+            _playerControl?.Stop();
+            if (_playerControl == null || !_playerControl.IsValid)
+            {
+                playMusic();
+            }
         }
 
         private void btnVoltar_Click(object sender, EventArgs e)
         {
             _skipToPrevious = true;
-            if (_playerControl != null && !_playerControl.IsPlaying) { _playerControl.Play(); }
-            //isplaying = true;
+            //if (_playerControl != null && !_playerControl.IsPlaying) { _playerControl.Play(); }
+            _playerControl?.Stop();
+
+            if (_playerControl == null || !_playerControl.IsValid)
+            {
+                playMusic();
+            }
         }
 
         private void btnPlayPause_Click(object sender, EventArgs e)
         {
-            if (listView1.Items.Count <= 0) {
+            if (InvokeAux.GetValue(listView1, lvw => lvw.Items.Count) <= 0)
+            {
                 _playerControl?.Stop();
-                btnPlayPause.Text = ">";
+                InvokeAux.Access(btnPlayPause, btn => btn.Text = ">");
                 return;
             }
 
             if (_playerControl == null)
             {
-                _ = playMusic();
-                btnPlayPause.Text = (_playerControl != null && _playerControl.IsPlaying) ? "||" : ">";
+                playMusic();
             }
             else if (_playerControl != null)
             {
-                btnPlayPause.Text = (_playerControl != null && _playerControl.IsPlaying) ? "||" : ">";
                 if (_playerControl.IsPlaying)
                 {
                     _playerControl.Pause();
@@ -350,13 +524,18 @@ namespace MyPlayer
 
             }
 
-            Console.WriteLine($"_playerControl.IsPlaying: {_playerControl?.IsPlaying}, EstadoPlayerProp: {_playerControl?.EstadoPlayerProp}");
+            //Console.WriteLine($"_playerControl.IsPlaying: {_playerControl?.IsPlaying}, PlaybackStateProp: {_playerControl?.PlaybackStateProp}");
         }
 
         private void btnProximo_Click(object sender, EventArgs e)
         {
             _skipToNext = true;
             _playerControl?.Stop();
+
+            if (_playerControl == null || !_playerControl.IsValid)
+            {
+                playMusic();
+            }
 
             //if (_playerControl != null && !_playerControl.IsPlaying) { _playerControl.Play(); }
             //isplaying = true;
@@ -371,7 +550,7 @@ namespace MyPlayer
 
             var itemAtual = _musicas[_indiceMusica];
 
-            InvokeAux.SetValue(listView1, lv =>
+            InvokeAux.Access(listView1, lv =>
             {
                 lv.SelectedItems.Clear();
                 itemAtual.Selected = true;
@@ -380,15 +559,13 @@ namespace MyPlayer
         }
 
 
-        private async Task playMusic()
+        private void playMusic()
         {
             _musicas ??= GetListMusicas();
             if (_musicas == null || _musicas.Count == 0) return;
 
-            //isplaying = true;
-
-            if (_indiceMusica >= _musicas.Count)
-                _indiceMusica = 0;
+            if (_indiceMusica < 0) _indiceMusica = _musicas.Count - 1;
+            if (_indiceMusica >= _musicas.Count) _indiceMusica = 0;
 
             ListViewItem itemAtual = _musicas[_indiceMusica];
             string? path = itemAtual.Tag?.ToString();
@@ -398,79 +575,58 @@ namespace MyPlayer
             _playerControl = new PlayerControl(path);
             _playerControl.EvtProgressUpdated += Player_ProgressUpdated;
             _playerControl.EvtPlaying += Player_EvtPlaying;
+            _playerControl.EvtPaused += Player_EvtPaused;
+            _playerControl.EvtResume += Player_EvtResume;
             _playerControl.EvtStop += Player_EvtStop;
+            _playerControl.EvtMusicEnded += Player_EvtMusicEnded;
             _playerControl.Play();
+
 
             Console.WriteLine($"🎵 Tocando música: {_indiceMusica}, {path}");
 
             // Atualiza seleção visual
             AtualizarSelecaoMusicaAtual();
-
-            // Simula "reprodução" com checagem frequente de pausa/skip
-            // for (int i = 0; i < 10 && isplaying && !_skipToNext && !_skipToPrevious; i++)
-            //for (int i = 0; i < 10 && (_playerControl != null && _playerControl.IsPlaying) && !_skipToNext && !_skipToPrevious; i++)
-
-            // obs: existe o estado MusicaFinalizada, que retorna true em _playerControl.IsPlaying
-            await Util.WaitWhileAsync(() =>
-                _playerControl != null &&
-                _playerControl.EstadoPlayerProp == PlayerControl.EstadoPlayer.Play &&
-                !_skipToNext &&
-                !_skipToPrevious, 100);
-
-            //if (!isplaying)
-            if (_playerControl == null || !_playerControl.IsPlaying)
-            {
-                Console.WriteLine("▶️ Reprodução pausada ou finalizada.");
-                //_playerControl?.Stop();
-                return;
-            }
-
-            if (_skipToNext)
-            {
-                analiseIndiceMusica();
-                Console.WriteLine($"⏭ Pulando música {_indiceMusica}...");
-                _skipToNext = false;
-            }
-            else if (_skipToPrevious)
-            {
-                analiseIndiceMusica(false);
-                Console.WriteLine($"⏭ Voltando música {_indiceMusica}...");
-                _skipToPrevious = false;
-            }
-            else
-            {
-                Console.WriteLine($"⏹ Música {_indiceMusica} terminou...");
-                analiseIndiceMusica();
-            }
-
-            //if (isplaying)
-            if (_playerControl != null && _playerControl.IsPlaying)
-            {
-                _playerControl?.Stop();
-                _ = playMusic();
-                return;
-            }
-
-            _playerControl?.Stop();
         }
 
 
         private void Player_EvtPlaying(object? sender, EventArgs e)
         {
+            InvokeAux.Access(btnPlayPause, btn => btn.Text = "||");
+            AtualizarSelecaoMusicaAtual();
+
             if (_playerControl == null) return;
 
-            InvokeAux.SetValue(progressBar1, pg => pg.Value = 0);
-            InvokeAux.SetValue(trackBar1, tckbar => tckbar.Value = 0);
+            InvokeAux.Access(progressBar1, pg => pg.Value = 0);
+            InvokeAux.Access(trackBar1, tckbar => tckbar.Value = 0);
 
             TimeSpan musicDuration = _playerControl.MusicDuration;
-            InvokeAux.SetValue(lblStatus, lbl => lbl.Text = $"00:00 | {musicDuration:mm\\:ss}");
+            InvokeAux.Access(lblStatus, lbl => lbl.Text = $"00:00 | {musicDuration:mm\\:ss}");
+        }
+
+        private void Player_EvtPaused(object? sender, EventArgs e)
+        {
+            InvokeAux.Access(btnPlayPause, btn => btn.Text = ">");
+        }
+
+        private void Player_EvtResume(object? sender, EventArgs e)
+        {
+            InvokeAux.Access(btnPlayPause, btn => btn.Text = "||");
+            AtualizarSelecaoMusicaAtual();
         }
 
         private void Player_EvtStop(object? sender, EventArgs e)
         {
-            InvokeAux.SetValue(lblStatus, lbl => lbl.Text = "Parado");
-            InvokeAux.SetValue(progressBar1, pg => pg.Value = 0);
-            InvokeAux.SetValue(trackBar1, tckbar => tckbar.Value = 0);
+            InvokeAux.Access(btnPlayPause, btn => btn.Text = ">");
+
+            InvokeAux.Access(lblStatus, lbl => lbl.Text = "Parado");
+            InvokeAux.Access(progressBar1, pg => pg.Value = 0);
+            InvokeAux.Access(trackBar1, tckbar => tckbar.Value = 0);
+        }
+
+        private void Player_EvtMusicEnded(object? sender, EventArgs e)
+        {
+            analiseIndiceMusica();
+            playMusic();
         }
 
         private void Player_ProgressUpdated(object? sender, double percent)
@@ -480,15 +636,15 @@ namespace MyPlayer
             // Use InvokeAux para definir os valores na thread da UI
             if (percent >= 0 && percent <= 100)
             {
-                InvokeAux.SetValue(progressBar1, pg => pg.Value = (int)percent);
-                InvokeAux.SetValue(trackBar1, tckbar => tckbar.Value = (int)percent);
+                InvokeAux.Access(progressBar1, pg => pg.Value = (int)percent);
+                InvokeAux.Access(trackBar1, tckbar => tckbar.Value = (int)percent);
             }
 
             TimeSpan currentTime = _playerControl.CurrentTime;
             TimeSpan musicDuration = _playerControl.MusicDuration;
-            InvokeAux.SetValue(lblStatus, lbl => lbl.Text = $"{currentTime:mm\\:ss} | {musicDuration:mm\\:ss}");
+            InvokeAux.Access(lblStatus, lbl => lbl.Text = $"{currentTime:mm\\:ss} | {musicDuration:mm\\:ss}");
 
-            Console.WriteLine($"percent: {percent}");
+            //Console.WriteLine($"percent: {percent}");
         }
 
         private void trackBar1_Scroll(object sender, EventArgs e)
@@ -497,20 +653,27 @@ namespace MyPlayer
             _playerControl.SetPercent(InvokeAux.GetValue(trackBar1, tckbar => tckbar.Value));
         }
 
-        private void analiseIndiceMusica(bool avancar = true)
+        private void analiseIndiceMusica()
         {
-            _indiceMusica = avancar ? _indiceMusica + 1 : _indiceMusica - 1;
+            if (listViewDblClick) { listViewDblClick = false; return; }
             _musicas ??= GetListMusicas();
-            if (_musicas == null || _musicas.Count == 0) { return; }
-            if (_indiceMusica < 0)
-                _indiceMusica = _musicas.Count - 1;
-            if (_indiceMusica >= _musicas.Count)
-                _indiceMusica = 0;
+            if (_musicas == null || _musicas.Count == 0) return;
+
+            bool avancar = (_skipToNext && !_skipToPrevious) || (!_skipToNext && !_skipToPrevious);
+            _skipToNext = _skipToPrevious = false;
+            //Console.WriteLine($"_skipToNext: {_skipToNext}, _skipToPrevious: {_skipToPrevious}, avancar: {avancar}");
+
+            _indiceMusica += avancar ? 1 : -1;
+            if (_indiceMusica < 0) _indiceMusica = _musicas.Count - 1;
+            if (_indiceMusica >= _musicas.Count) _indiceMusica = 0;
 
             AtualizarSelecaoMusicaAtual();
         }
 
         #endregion
+
+
+
 
     }
 }

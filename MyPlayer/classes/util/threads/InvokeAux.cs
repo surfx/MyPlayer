@@ -23,7 +23,7 @@
         /// <summary>
         /// Define um valor de forma segura em um controle WinForms.
         /// </summary>
-        public static void SetValue<TControl>(TControl ctrl, Action<TControl> setter)
+        public static void Access<TControl>(TControl ctrl, Action<TControl> setter)
             where TControl : Control
         {
             if (ctrl == null)
@@ -34,6 +34,7 @@
             else
                 setter(ctrl);
         }
+
     }
 }
 
@@ -42,16 +43,16 @@
 
 Exemplos:
 
-InvokeAux.SetValue(listView1, lv =>
+InvokeAux.Access(listView1, lv =>
 {
     lv.SelectedItems.Clear();
     itemAtual.Selected = true;
     itemAtual.EnsureVisible();
 });
 
-InvokeAux.SetValue(lblStatus, lbl => lbl.Text = "Parado");
-InvokeAux.SetValue(progressBar1, pb => pb.Value = 0);
-InvokeAux.SetValue(trackBar1, tb => tb.Value = 0);
+InvokeAux.Access(lblStatus, lbl => lbl.Text = "Parado");
+InvokeAux.Access(progressBar1, pb => pb.Value = 0);
+InvokeAux.Access(trackBar1, tb => tb.Value = 0);
 
 _playerControl.SetPercent(
     InvokeAux.GetValue(trackBar1, tb => (double)tb.Value)

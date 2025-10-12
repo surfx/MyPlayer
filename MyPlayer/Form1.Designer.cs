@@ -36,6 +36,7 @@
             treeView1 = new TreeView();
             imageList1 = new ImageList(components);
             listView1 = new ListView();
+            contextMenuStrip1 = new ContextMenuStrip(components);
             btnRandomizar = new Button();
             btnVoltar = new Button();
             btnPlayPause = new Button();
@@ -94,6 +95,7 @@
             // 
             // listView1
             // 
+            listView1.ContextMenuStrip = contextMenuStrip1;
             listView1.LargeImageList = imageList1;
             listView1.Location = new Point(304, 56);
             listView1.Name = "listView1";
@@ -102,6 +104,13 @@
             listView1.TabIndex = 4;
             listView1.UseCompatibleStateImageBehavior = false;
             listView1.DoubleClick += listView1_DoubleClick;
+            listView1.MouseDown += listView1_MouseDown;
+            // 
+            // contextMenuStrip1
+            // 
+            contextMenuStrip1.ImageScalingSize = new Size(24, 24);
+            contextMenuStrip1.Name = "contextMenuStrip1";
+            contextMenuStrip1.Size = new Size(61, 4);
             // 
             // btnRandomizar
             // 
@@ -188,6 +197,7 @@
             Name = "frmMyPlayer";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "My Player";
+            FormClosing += frmMyPlayer_FormClosing;
             Load += frmMyPlayer_Load;
             ((System.ComponentModel.ISupportInitialize)trackBar1).EndInit();
             ResumeLayout(false);
@@ -209,5 +219,6 @@
         private Label lblStatus;
         private ProgressBar progressBar1;
         private TrackBar trackBar1;
+        private ContextMenuStrip contextMenuStrip1;
     }
 }
