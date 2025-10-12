@@ -21,9 +21,11 @@
         }
 
         public bool IsPlayingMusicControl => musicControl.IsPlaying;
-        public bool IsPaused => musicControl.IsPaused;
+        public bool IsPausedMusicControl => musicControl.IsPaused;
 
         public bool IsPlaying => EstadoPlayerProp == EstadoPlayer.Play || EstadoPlayerProp == EstadoPlayer.MusicaFinalizada;
+        public bool IsPaused => EstadoPlayerProp == EstadoPlayer.Pause;
+        public bool IsStop => EstadoPlayerProp == EstadoPlayer.Stop;
 
         public EstadoPlayer EstadoPlayerProp { get; set; } = EstadoPlayer.Stop;
 
@@ -62,13 +64,20 @@
 
                 try
                 {
-                    while (musicControl.IsPlaying && !cts.Token.IsCancellationRequested)
+
+                    while ((IsPlaying || IsPaused)
+                    && !cts.Token.IsCancellationRequested
+                    && !IsStop
+                    && (IsPlayingMusicControl || IsPausedMusicControl)
+                    && musicControl.GetProgress() < 100.0d)
                     {
-                        EvtProgressUpdated?.Invoke(this, musicControl.GetProgress());
+                        Console.WriteLine($"IsPlaying: {IsPlaying}, IsPaused: {IsPaused}, !cts.Token.IsCancellationRequested: {!cts.Token.IsCancellationRequested}, EstadoPlayerProp: {EstadoPlayerProp}");
+                        if (!IsPaused && !IsPausedMusicControl) EvtProgressUpdated?.Invoke(this, musicControl.GetProgress());
                         await Task.Delay(200, cts.Token); // atualiza a cada 200ms
                     }
 
                     // Atualiza progresso final
+                    Console.WriteLine("Final progres...");
                     EvtProgressUpdated?.Invoke(this, musicControl.GetProgress());
                 }
                 catch (TaskCanceledException)
@@ -87,6 +96,7 @@
             if (!musicControl.IsValid || !IsPlayingMusicControl) return;
             musicControl.Pause();
             SetEstado(EstadoPlayer.Pause);
+            Console.WriteLine($"*** [Pause] EstadoPlayerProp: {EstadoPlayerProp} ***");
         }
 
         public void Resume()

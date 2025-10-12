@@ -8,70 +8,55 @@
         /// <summary>
         /// Recupera um valor de forma segura de um controle WinForms.
         /// </summary>
-        public static T GetValue<T>(Control ctrl, Func<Control, T> getter)
+        public static TResult GetValue<TControl, TResult>(TControl ctrl, Func<TControl, TResult> getter)
+            where TControl : Control
         {
             if (ctrl == null)
                 throw new ArgumentNullException(nameof(ctrl));
 
             if (ctrl.InvokeRequired)
-            {
-                return (T)ctrl.Invoke(new Func<T>(() => getter(ctrl)));
-            }
+                return (TResult)ctrl.Invoke(new Func<TResult>(() => getter(ctrl)));
             else
-            {
                 return getter(ctrl);
-            }
         }
 
         /// <summary>
         /// Define um valor de forma segura em um controle WinForms.
         /// </summary>
-        //public static void SetValue(Control ctrl, Action<Control> setter)
-        //{
-        //    if (ctrl == null)
-        //        throw new ArgumentNullException(nameof(ctrl));
-
-        //    if (ctrl.InvokeRequired)
-        //    {
-        //        ctrl.Invoke(new Action(() => setter(ctrl)));
-        //    }
-        //    else
-        //    {
-        //        setter(ctrl);
-        //    }
-        //}
-
-        public static void SetValue(Control ctrl, Action<Control> setter)
+        public static void SetValue<TControl>(TControl ctrl, Action<TControl> setter)
+            where TControl : Control
         {
             if (ctrl == null)
                 throw new ArgumentNullException(nameof(ctrl));
 
             if (ctrl.InvokeRequired)
-            {
                 ctrl.BeginInvoke(new Action(() => setter(ctrl)));
-            }
             else
-            {
                 setter(ctrl);
-            }
         }
-
-
     }
 }
+
 
 /*
 
 Exemplos:
 
-string texto = InvokeAux.GetValue(meuTextBox, c => ((TextBox)c).Text);
-
-InvokeAux.SetValue(meuLabel, c => c.Text = "Processando...");
-
-InvokeAux.SetValue(minhaProgressBar, c => {
-    c.Enabled = true;
-    ((ProgressBar)c).Value = 50;
+InvokeAux.SetValue(listView1, lv =>
+{
+    lv.SelectedItems.Clear();
+    itemAtual.Selected = true;
+    itemAtual.EnsureVisible();
 });
+
+InvokeAux.SetValue(lblStatus, lbl => lbl.Text = "Parado");
+InvokeAux.SetValue(progressBar1, pb => pb.Value = 0);
+InvokeAux.SetValue(trackBar1, tb => tb.Value = 0);
+
+_playerControl.SetPercent(
+    InvokeAux.GetValue(trackBar1, tb => (double)tb.Value)
+);
+
 
  
 */

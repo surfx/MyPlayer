@@ -65,6 +65,7 @@ namespace MyPlayer.classes.player
             if (!IsValid || !IsPlaying) { return; }
             waveOutEvent!.Pause();
             IsPaused = true;
+            IsPlaying = false;
 
             EvtPaused?.Invoke(this, EventArgs.Empty);
         }
@@ -74,6 +75,7 @@ namespace MyPlayer.classes.player
             if (!IsValid || !IsPaused) { return; }
             waveOutEvent!.Play();
             IsPaused = false;
+            IsPlaying = true;
 
             EvtResume?.Invoke(this, EventArgs.Empty);
         }
