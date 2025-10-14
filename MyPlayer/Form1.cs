@@ -1,4 +1,5 @@
-﻿#define DEBUG
+﻿//#define DEBUG
+#undef DEBUG
 
 using MyPlayer.classes.controleestados;
 using MyPlayer.classes.filtrarmusicas;
@@ -25,10 +26,13 @@ namespace MyPlayer
         private bool _skipToPrevious = false;
         private PlayerControl? _playerControl;
         private bool listViewDblClick = false;
+        private const bool PermitirSystray = false;
 
         private WaveImage _wi;
 
         private FiltrarMusicas _filtrarMusicas = FiltrarMusicas.Instance;
+
+        private enum EImageIndex : int { play = 3, pause = 9 }
 
         public frmMyPlayer()
         {
@@ -79,6 +83,8 @@ namespace MyPlayer
         #region systray
         private void frmMyPlayer_Resize(object sender, EventArgs e)
         {
+            if (!PermitirSystray) { return; }
+
             //if (!chkSysTray.Checked) { return; }
             if (FormWindowState.Minimized == this.WindowState)
             {
@@ -660,9 +666,30 @@ namespace MyPlayer
         }
 
         #region eventos player
+        private void updateFormTitle(bool reset = false, string status = "") {
+            if (reset) {
+                InvokeAux.Access(this, frm => frm.Text = "My Player");
+            }
+            if (_estadoAtual.IndiceMusica >= 0 && _estadoAtual.IndiceMusica < _estadoAtual.Musicas.Count)
+            {
+                ListViewItem itemAtual = _estadoAtual.Musicas[_estadoAtual.IndiceMusica];
+                string nomeSemExtensao = Path.GetFileNameWithoutExtension(itemAtual.Text);
+                string title = $"My Player | {nomeSemExtensao}";
+                if (!string.IsNullOrEmpty(status)) {
+                    title = $"{title} | {status}";
+                }
+                InvokeAux.Access(this, frm => frm.Text = title);
+                return;
+            }
+            InvokeAux.Access(this, frm => frm.Text = "My Player");
+        }
+
         private void Player_EvtPlaying(object? sender, EventArgs e)
         {
-            InvokeAux.Access(btnPlayPause, btn => btn.Text = "||");
+            updateFormTitle();
+
+            //InvokeAux.Access(btnPlayPause, btn => btn.Text = "||");
+            InvokeAux.Access(btnPlayPause, btn => btn.ImageIndex = (int)EImageIndex.pause);
             AtualizarSelecaoMusicaAtual();
 
             if (_playerControl == null) return;
@@ -676,18 +703,25 @@ namespace MyPlayer
 
         private void Player_EvtPaused(object? sender, EventArgs e)
         {
-            InvokeAux.Access(btnPlayPause, btn => btn.Text = ">");
+            updateFormTitle(status: "pause");
+            //InvokeAux.Access(btnPlayPause, btn => btn.Text = ">");
+            InvokeAux.Access(btnPlayPause, btn => btn.ImageIndex = (int)EImageIndex.play);
         }
 
         private void Player_EvtResume(object? sender, EventArgs e)
         {
-            InvokeAux.Access(btnPlayPause, btn => btn.Text = "||");
+            updateFormTitle();
+            //InvokeAux.Access(btnPlayPause, btn => btn.Text = "||");
+            InvokeAux.Access(btnPlayPause, btn => btn.ImageIndex = (int)EImageIndex.pause);
             AtualizarSelecaoMusicaAtual();
         }
 
         private void Player_EvtStop(object? sender, EventArgs e)
         {
-            InvokeAux.Access(btnPlayPause, btn => btn.Text = ">");
+            updateFormTitle(true);
+
+            //InvokeAux.Access(btnPlayPause, btn => btn.Text = ">");
+            InvokeAux.Access(btnPlayPause, btn => btn.ImageIndex = (int)EImageIndex.play);
 
             InvokeAux.Access(lblStatus, lbl => lbl.Text = "Parado");
             InvokeAux.Access(progressBar1, pg => pg.Value = 0);
@@ -696,6 +730,7 @@ namespace MyPlayer
 
         private void Player_EvtMusicEnded(object? sender, EventArgs e)
         {
+            updateFormTitle(true);
             analiseIndiceMusica();
             playMusic();
         }

@@ -33,8 +33,8 @@
             label1 = new Label();
             txtPathMusicas = new TextBox();
             btnOpenFolderMusics = new Button();
-            treeView1 = new TreeView();
             imageList1 = new ImageList(components);
+            treeView1 = new TreeView();
             listView1 = new ListView();
             contextMenuStrip1 = new ContextMenuStrip(components);
             btnRandomizar = new Button();
@@ -47,14 +47,16 @@
             pictureBox1 = new PictureBox();
             txtFiltro = new TextBox();
             notifyIcon1 = new NotifyIcon(components);
+            pictureBox2 = new PictureBox();
             ((System.ComponentModel.ISupportInitialize)trackBar1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)pictureBox2).BeginInit();
             SuspendLayout();
             // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(12, 9);
+            label1.Location = new Point(39, 14);
             label1.Name = "label1";
             label1.Size = new Size(75, 25);
             label1.TabIndex = 0;
@@ -62,31 +64,21 @@
             // 
             // txtPathMusicas
             // 
-            txtPathMusicas.Location = new Point(93, 9);
+            txtPathMusicas.Location = new Point(129, 11);
             txtPathMusicas.Name = "txtPathMusicas";
-            txtPathMusicas.Size = new Size(968, 31);
+            txtPathMusicas.Size = new Size(933, 31);
             txtPathMusicas.TabIndex = 1;
             // 
             // btnOpenFolderMusics
             // 
-            btnOpenFolderMusics.Location = new Point(1067, 9);
+            btnOpenFolderMusics.ImageIndex = 8;
+            btnOpenFolderMusics.ImageList = imageList1;
+            btnOpenFolderMusics.Location = new Point(1068, 9);
             btnOpenFolderMusics.Name = "btnOpenFolderMusics";
             btnOpenFolderMusics.Size = new Size(45, 34);
             btnOpenFolderMusics.TabIndex = 2;
-            btnOpenFolderMusics.Text = "...";
             btnOpenFolderMusics.UseVisualStyleBackColor = true;
             btnOpenFolderMusics.Click += btnOpenFolderMusics_Click;
-            // 
-            // treeView1
-            // 
-            treeView1.ImageIndex = 0;
-            treeView1.ImageList = imageList1;
-            treeView1.Location = new Point(12, 56);
-            treeView1.Name = "treeView1";
-            treeView1.SelectedImageIndex = 0;
-            treeView1.Size = new Size(286, 347);
-            treeView1.TabIndex = 3;
-            treeView1.AfterSelect += treeView1_AfterSelect;
             // 
             // imageList1
             // 
@@ -96,12 +88,30 @@
             imageList1.Images.SetKeyName(0, "icons8-folder-32.png");
             imageList1.Images.SetKeyName(1, "icons8-open-file-folder-32.png");
             imageList1.Images.SetKeyName(2, "icons8-file-32.png");
+            imageList1.Images.SetKeyName(3, "icons8-play-20.png");
+            imageList1.Images.SetKeyName(4, "icons8-back-20.png");
+            imageList1.Images.SetKeyName(5, "icons8-next-20.png");
+            imageList1.Images.SetKeyName(6, "icons8-random-20.png");
+            imageList1.Images.SetKeyName(7, "icons8-treble-clef-20.png");
+            imageList1.Images.SetKeyName(8, "icons8-folder-20.png");
+            imageList1.Images.SetKeyName(9, "icons8-pause-20.png");
+            // 
+            // treeView1
+            // 
+            treeView1.ImageIndex = 0;
+            treeView1.ImageList = imageList1;
+            treeView1.Location = new Point(13, 53);
+            treeView1.Name = "treeView1";
+            treeView1.SelectedImageIndex = 0;
+            treeView1.Size = new Size(286, 347);
+            treeView1.TabIndex = 3;
+            treeView1.AfterSelect += treeView1_AfterSelect;
             // 
             // listView1
             // 
             listView1.ContextMenuStrip = contextMenuStrip1;
             listView1.LargeImageList = imageList1;
-            listView1.Location = new Point(304, 56);
+            listView1.Location = new Point(305, 53);
             listView1.Name = "listView1";
             listView1.Size = new Size(808, 347);
             listView1.SmallImageList = imageList1;
@@ -118,48 +128,52 @@
             // 
             // btnRandomizar
             // 
-            btnRandomizar.Location = new Point(12, 462);
+            btnRandomizar.ImageIndex = 6;
+            btnRandomizar.ImageList = imageList1;
+            btnRandomizar.Location = new Point(13, 459);
             btnRandomizar.Name = "btnRandomizar";
-            btnRandomizar.Size = new Size(63, 34);
+            btnRandomizar.Size = new Size(41, 34);
             btnRandomizar.TabIndex = 6;
-            btnRandomizar.Text = "rnd";
             btnRandomizar.UseVisualStyleBackColor = true;
             btnRandomizar.Click += btnRandomizar_Click;
             // 
             // btnVoltar
             // 
-            btnVoltar.Location = new Point(81, 462);
+            btnVoltar.ImageIndex = 4;
+            btnVoltar.ImageList = imageList1;
+            btnVoltar.Location = new Point(60, 459);
             btnVoltar.Name = "btnVoltar";
             btnVoltar.Size = new Size(41, 34);
             btnVoltar.TabIndex = 7;
-            btnVoltar.Text = "|<";
             btnVoltar.UseVisualStyleBackColor = true;
             btnVoltar.Click += btnVoltar_Click;
             // 
             // btnPlayPause
             // 
-            btnPlayPause.Location = new Point(128, 462);
+            btnPlayPause.ImageIndex = 3;
+            btnPlayPause.ImageList = imageList1;
+            btnPlayPause.Location = new Point(107, 459);
             btnPlayPause.Name = "btnPlayPause";
             btnPlayPause.Size = new Size(41, 34);
             btnPlayPause.TabIndex = 8;
-            btnPlayPause.Text = ">";
             btnPlayPause.UseVisualStyleBackColor = true;
             btnPlayPause.Click += btnPlayPause_Click;
             // 
             // btnProximo
             // 
-            btnProximo.Location = new Point(175, 462);
+            btnProximo.ImageIndex = 5;
+            btnProximo.ImageList = imageList1;
+            btnProximo.Location = new Point(154, 459);
             btnProximo.Name = "btnProximo";
             btnProximo.Size = new Size(41, 34);
             btnProximo.TabIndex = 9;
-            btnProximo.Text = ">|";
             btnProximo.UseVisualStyleBackColor = true;
             btnProximo.Click += btnProximo_Click;
             // 
             // lblStatus
             // 
             lblStatus.AutoSize = true;
-            lblStatus.Location = new Point(762, 467);
+            lblStatus.Location = new Point(763, 464);
             lblStatus.Name = "lblStatus";
             lblStatus.Size = new Size(60, 25);
             lblStatus.TabIndex = 10;
@@ -167,22 +181,22 @@
             // 
             // progressBar1
             // 
-            progressBar1.Location = new Point(930, 462);
+            progressBar1.Location = new Point(931, 459);
             progressBar1.Name = "progressBar1";
             progressBar1.Size = new Size(182, 34);
             progressBar1.TabIndex = 11;
             // 
             // trackBar1
             // 
-            trackBar1.Location = new Point(222, 462);
+            trackBar1.Location = new Point(213, 459);
             trackBar1.Name = "trackBar1";
-            trackBar1.Size = new Size(505, 69);
+            trackBar1.Size = new Size(520, 69);
             trackBar1.TabIndex = 12;
             trackBar1.Scroll += trackBar1_Scroll;
             // 
             // pictureBox1
             // 
-            pictureBox1.Location = new Point(12, 512);
+            pictureBox1.Location = new Point(13, 509);
             pictureBox1.Name = "pictureBox1";
             pictureBox1.Size = new Size(1098, 75);
             pictureBox1.TabIndex = 13;
@@ -191,7 +205,7 @@
             // 
             // txtFiltro
             // 
-            txtFiltro.Location = new Point(12, 409);
+            txtFiltro.Location = new Point(13, 406);
             txtFiltro.Name = "txtFiltro";
             txtFiltro.Size = new Size(1098, 31);
             txtFiltro.TabIndex = 14;
@@ -205,11 +219,22 @@
             notifyIcon1.Visible = true;
             notifyIcon1.DoubleClick += notifyIcon1_DoubleClick;
             // 
+            // pictureBox2
+            // 
+            pictureBox2.Image = Properties.Resources.icons8_treble_clef_20;
+            pictureBox2.Location = new Point(13, 17);
+            pictureBox2.Name = "pictureBox2";
+            pictureBox2.Size = new Size(20, 20);
+            pictureBox2.SizeMode = PictureBoxSizeMode.AutoSize;
+            pictureBox2.TabIndex = 15;
+            pictureBox2.TabStop = false;
+            // 
             // frmMyPlayer
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1122, 602);
+            ClientSize = new Size(1123, 603);
+            Controls.Add(pictureBox2);
             Controls.Add(txtFiltro);
             Controls.Add(pictureBox1);
             Controls.Add(trackBar1);
@@ -235,6 +260,7 @@
             Resize += frmMyPlayer_Resize;
             ((System.ComponentModel.ISupportInitialize)trackBar1).EndInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
+            ((System.ComponentModel.ISupportInitialize)pictureBox2).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -258,5 +284,6 @@
         private PictureBox pictureBox1;
         private TextBox txtFiltro;
         private NotifyIcon notifyIcon1;
+        private PictureBox pictureBox2;
     }
 }
