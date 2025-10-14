@@ -5,7 +5,7 @@ namespace MyPlayer.classes.player
     public class MusicControl : IDisposable
     {
 
-        private AudioFileReader? _audioFile { get; set; }
+        public AudioFileReader? AudioFile { get; set; }
         private WaveOutEvent? _waveOutEvent { get; set; }
 
         public PlaybackState? PlaybackStateProp => _waveOutEvent?.PlaybackState;
@@ -13,7 +13,7 @@ namespace MyPlayer.classes.player
         public bool IsPaused => PlaybackStateProp == PlaybackState.Paused;
         public bool IsStoped => PlaybackStateProp == PlaybackState.Stopped;
 
-        public bool IsValid => _audioFile != null && _waveOutEvent != null;
+        public bool IsValid => AudioFile != null && _waveOutEvent != null;
 
         public TimeSpan TotalTime { get; private set; }
 
@@ -27,13 +27,13 @@ namespace MyPlayer.classes.player
         public MusicControl(string musicPath)
         {
             if (string.IsNullOrEmpty(musicPath) || !File.Exists(musicPath)) { return; }
-            _audioFile = new AudioFileReader(musicPath);
+            AudioFile = new AudioFileReader(musicPath);
             _waveOutEvent = new WaveOutEvent();
             if (!IsValid) { return; }
-            _waveOutEvent.Init(_audioFile);
+            _waveOutEvent.Init(AudioFile);
             //IsPlaying = IsPaused = false;
 
-            TotalTime = _audioFile.TotalTime;
+            TotalTime = AudioFile.TotalTime;
             _waveOutEvent.PlaybackStopped += (s, e) =>
             {
                 //IsPlaying = false;
@@ -46,11 +46,11 @@ namespace MyPlayer.classes.player
         public double GetProgress()
         {
             if (!IsValid || TotalTime.TotalSeconds <= 0) return 0.0;
-            return (_audioFile!.CurrentTime.TotalSeconds / TotalTime.TotalSeconds) * 100;
+            return (AudioFile!.CurrentTime.TotalSeconds / TotalTime.TotalSeconds) * 100;
         }
 
-        public TimeSpan GetCurrentTime() => !IsValid ? TimeSpan.Zero : _audioFile!.CurrentTime;
-        public long GetMaxPosition() => !IsValid ? 0 : _audioFile!.Length;
+        public TimeSpan GetCurrentTime() => !IsValid ? TimeSpan.Zero : AudioFile!.CurrentTime;
+        public long GetMaxPosition() => !IsValid ? 0 : AudioFile!.Length;
 
         #region music control
 
@@ -91,7 +91,7 @@ namespace MyPlayer.classes.player
 
             if (!IsValid) { return; }
             if (_waveOutEvent != null) _waveOutEvent.Stop();
-            try { if (_audioFile != null) _audioFile.Position = 0; } catch (Exception) { }
+            try { if (AudioFile != null) AudioFile.Position = 0; } catch (Exception) { }
 
             EvtStop?.Invoke(this, EventArgs.Empty);
         }
@@ -100,8 +100,8 @@ namespace MyPlayer.classes.player
         {
             if (!IsValid) { return; }
             time = time < TimeSpan.Zero ? TimeSpan.Zero : time;
-            time = time > _audioFile!.TotalTime ? _audioFile.TotalTime : time;
-            _audioFile!.CurrentTime = time;
+            time = time > AudioFile!.TotalTime ? AudioFile.TotalTime : time;
+            AudioFile!.CurrentTime = time;
         }
 
         /**
@@ -110,17 +110,17 @@ namespace MyPlayer.classes.player
         public void SetPosition(long position)
         {
             if (!IsValid || position < 0) { return; }
-            position = Math.Min(position, _audioFile!.Length);
-            _audioFile!.Position = position;
+            position = Math.Min(position, AudioFile!.Length);
+            AudioFile!.Position = position;
         }
 
         public void SetPercent(double percent)
         {
-            if (!IsValid || _audioFile == null) return;
+            if (!IsValid || AudioFile == null) return;
             percent = Math.Clamp(percent, 0, 100);
             var targetTime = TimeSpan.FromSeconds(TotalTime.TotalSeconds * (percent / 100.0));
             // Garante que o tempo não ultrapasse o total
-            _audioFile.CurrentTime = targetTime > TotalTime ? TotalTime : targetTime;
+            AudioFile.CurrentTime = targetTime > TotalTime ? TotalTime : targetTime;
         }
 
         #endregion
@@ -141,7 +141,7 @@ namespace MyPlayer.classes.player
             {
                 // Libera recursos gerenciados
                 _waveOutEvent?.Dispose();
-                _audioFile?.Dispose();
+                AudioFile?.Dispose();
             }
 
             disposed = true;

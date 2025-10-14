@@ -44,7 +44,10 @@
             lblStatus = new Label();
             progressBar1 = new ProgressBar();
             trackBar1 = new TrackBar();
+            pictureBox1 = new PictureBox();
+            timer1 = new System.Windows.Forms.Timer(components);
             ((System.ComponentModel.ISupportInitialize)trackBar1).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
             // 
             // label1
@@ -176,11 +179,25 @@
             trackBar1.TabIndex = 12;
             trackBar1.Scroll += trackBar1_Scroll;
             // 
+            // pictureBox1
+            // 
+            pictureBox1.Location = new Point(12, 459);
+            pictureBox1.Name = "pictureBox1";
+            pictureBox1.Size = new Size(1098, 75);
+            pictureBox1.TabIndex = 13;
+            pictureBox1.TabStop = false;
+            pictureBox1.Click += pictureBox1_Click;
+            // 
+            // timer1
+            // 
+            timer1.Tick += timer1_Tick;
+            // 
             // frmMyPlayer
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1122, 463);
+            ClientSize = new Size(1122, 556);
+            Controls.Add(pictureBox1);
             Controls.Add(trackBar1);
             Controls.Add(progressBar1);
             Controls.Add(lblStatus);
@@ -200,6 +217,7 @@
             FormClosing += frmMyPlayer_FormClosing;
             Load += frmMyPlayer_Load;
             ((System.ComponentModel.ISupportInitialize)trackBar1).EndInit();
+            ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -220,5 +238,7 @@
         private ProgressBar progressBar1;
         private TrackBar trackBar1;
         private ContextMenuStrip contextMenuStrip1;
+        private PictureBox pictureBox1;
+        private System.Windows.Forms.Timer timer1;
     }
 }

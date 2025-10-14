@@ -24,6 +24,8 @@ namespace MyPlayer.classes.player
         public TimeSpan CurrentTime => _musicControl?.GetCurrentTime() ?? TimeSpan.Zero;
 
 
+        public AudioFileReader? AudioFileReaderProp => _musicControl == null ? null : _musicControl.AudioFile;
+
         public PlayerControl(string musicPath)
         {
             if (string.IsNullOrEmpty(musicPath) || !File.Exists(musicPath))

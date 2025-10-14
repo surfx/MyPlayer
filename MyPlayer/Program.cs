@@ -11,7 +11,16 @@ namespace MyPlayer
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new frmMyPlayer());
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            frmMyPlayer frm = new();
+            //Application.ApplicationExit += (s, e) =>
+            //{
+            //    frm.SalvarEstadoDoFormulario();
+            //};
+            Application.Run(frm);
+
         }
     }
 }

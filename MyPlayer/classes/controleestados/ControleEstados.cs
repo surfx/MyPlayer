@@ -6,34 +6,41 @@ namespace MyPlayer.classes.controleestados
     {
         private static readonly string EstadoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "estado.json");
 
-        public void SalvarEstado(FormularioEstado estado, ListView listView)
+        public static void SalvarEstado(FormularioEstado estado)
         {
+            //if (File.Exists(EstadoPath)) { File.Delete(EstadoPath); }
+
             try
             {
                 var serializavel = new SerializableFormularioEstado
                 {
                     MusicPath = estado.MusicPath,
                     IndiceMusica = estado.IndiceMusica,
-                    View = (int)listView.View,
-                    ColumnWidths = new List<int>(),
+                    View = estado.ListVewStateProp.View,
+                    ColumnWidths = estado.ListVewStateProp.ColumnWidths,
                     Musicas = new List<SerializableListViewItem>()
                 };
 
-                foreach (ColumnHeader col in listView.Columns)
-                    serializavel.ColumnWidths.Add(col.Width);
-
                 foreach (var item in estado.Musicas)
                 {
+                    if (item == null) continue;
+
+                    string tag = item.Tag?.ToString() ?? "";
+
                     var sItem = new SerializableListViewItem
                     {
-                        Text = item.Text,
+                        Text = item.Text ?? "",
                         ImageIndex = item.ImageIndex,
-                        Tag = item.Tag?.ToString(),
+                        Tag = tag,
                         SubItems = new List<string>()
                     };
 
-                    foreach (ListViewItem.ListViewSubItem sub in item.SubItems)
+                    // Começa do índice 1, para não duplicar o texto principal
+                    for (int i = 1; i < item.SubItems.Count; i++)
+                    {
+                        var sub = item.SubItems[i];
                         sItem.SubItems.Add(sub.Text);
+                    }
 
                     serializavel.Musicas.Add(sItem);
                 }
@@ -45,9 +52,12 @@ namespace MyPlayer.classes.controleestados
             {
                 MessageBox.Show("Erro ao salvar estado: " + ex.Message);
             }
+
+            //Console.WriteLine(estado);
+            //Console.ReadKey();
         }
 
-        public FormularioEstado RecuperarEstado(ListView listView)
+        public static FormularioEstado? RecuperarEstado()
         {
             try
             {
@@ -61,14 +71,12 @@ namespace MyPlayer.classes.controleestados
                 {
                     MusicPath = serializavel.MusicPath,
                     IndiceMusica = serializavel.IndiceMusica,
+                    ListVewStateProp = new(){ 
+                        View = serializavel.View,
+                        ColumnWidths = serializavel.ColumnWidths
+                    },
                     Musicas = new List<ListViewItem>()
                 };
-
-                listView.View = (View)serializavel.View;
-
-                // Restaurar colunas
-                for (int i = 0; i < serializavel.ColumnWidths.Count && i < listView.Columns.Count; i++)
-                    listView.Columns[i].Width = serializavel.ColumnWidths[i];
 
                 foreach (var sItem in serializavel.Musicas)
                 {
@@ -111,4 +119,5 @@ namespace MyPlayer.classes.controleestados
             public List<string> SubItems { get; set; }
         }
     }
+
 }
