@@ -45,7 +45,8 @@
             progressBar1 = new ProgressBar();
             trackBar1 = new TrackBar();
             pictureBox1 = new PictureBox();
-            timer1 = new System.Windows.Forms.Timer(components);
+            txtFiltro = new TextBox();
+            notifyIcon1 = new NotifyIcon(components);
             ((System.ComponentModel.ISupportInitialize)trackBar1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
@@ -117,7 +118,7 @@
             // 
             // btnRandomizar
             // 
-            btnRandomizar.Location = new Point(12, 409);
+            btnRandomizar.Location = new Point(12, 462);
             btnRandomizar.Name = "btnRandomizar";
             btnRandomizar.Size = new Size(63, 34);
             btnRandomizar.TabIndex = 6;
@@ -127,7 +128,7 @@
             // 
             // btnVoltar
             // 
-            btnVoltar.Location = new Point(81, 409);
+            btnVoltar.Location = new Point(81, 462);
             btnVoltar.Name = "btnVoltar";
             btnVoltar.Size = new Size(41, 34);
             btnVoltar.TabIndex = 7;
@@ -137,7 +138,7 @@
             // 
             // btnPlayPause
             // 
-            btnPlayPause.Location = new Point(128, 409);
+            btnPlayPause.Location = new Point(128, 462);
             btnPlayPause.Name = "btnPlayPause";
             btnPlayPause.Size = new Size(41, 34);
             btnPlayPause.TabIndex = 8;
@@ -147,7 +148,7 @@
             // 
             // btnProximo
             // 
-            btnProximo.Location = new Point(175, 409);
+            btnProximo.Location = new Point(175, 462);
             btnProximo.Name = "btnProximo";
             btnProximo.Size = new Size(41, 34);
             btnProximo.TabIndex = 9;
@@ -158,7 +159,7 @@
             // lblStatus
             // 
             lblStatus.AutoSize = true;
-            lblStatus.Location = new Point(762, 414);
+            lblStatus.Location = new Point(762, 467);
             lblStatus.Name = "lblStatus";
             lblStatus.Size = new Size(60, 25);
             lblStatus.TabIndex = 10;
@@ -166,14 +167,14 @@
             // 
             // progressBar1
             // 
-            progressBar1.Location = new Point(930, 409);
+            progressBar1.Location = new Point(930, 462);
             progressBar1.Name = "progressBar1";
             progressBar1.Size = new Size(182, 34);
             progressBar1.TabIndex = 11;
             // 
             // trackBar1
             // 
-            trackBar1.Location = new Point(222, 409);
+            trackBar1.Location = new Point(222, 462);
             trackBar1.Name = "trackBar1";
             trackBar1.Size = new Size(505, 69);
             trackBar1.TabIndex = 12;
@@ -181,22 +182,35 @@
             // 
             // pictureBox1
             // 
-            pictureBox1.Location = new Point(12, 459);
+            pictureBox1.Location = new Point(12, 512);
             pictureBox1.Name = "pictureBox1";
             pictureBox1.Size = new Size(1098, 75);
             pictureBox1.TabIndex = 13;
             pictureBox1.TabStop = false;
             pictureBox1.Click += pictureBox1_Click;
             // 
-            // timer1
+            // txtFiltro
             // 
-            timer1.Tick += timer1_Tick;
+            txtFiltro.Location = new Point(12, 409);
+            txtFiltro.Name = "txtFiltro";
+            txtFiltro.Size = new Size(1098, 31);
+            txtFiltro.TabIndex = 14;
+            txtFiltro.TextChanged += txtFiltro_TextChanged;
+            txtFiltro.KeyDown += txtFiltro_KeyDown;
+            // 
+            // notifyIcon1
+            // 
+            notifyIcon1.Icon = (Icon)resources.GetObject("notifyIcon1.Icon");
+            notifyIcon1.Text = "notifyIcon1";
+            notifyIcon1.Visible = true;
+            notifyIcon1.DoubleClick += notifyIcon1_DoubleClick;
             // 
             // frmMyPlayer
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1122, 556);
+            ClientSize = new Size(1122, 602);
+            Controls.Add(txtFiltro);
             Controls.Add(pictureBox1);
             Controls.Add(trackBar1);
             Controls.Add(progressBar1);
@@ -210,12 +224,15 @@
             Controls.Add(btnOpenFolderMusics);
             Controls.Add(txtPathMusicas);
             Controls.Add(label1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             Name = "frmMyPlayer";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "My Player";
             FormClosing += frmMyPlayer_FormClosing;
             Load += frmMyPlayer_Load;
+            Shown += frmMyPlayer_Shown;
+            Resize += frmMyPlayer_Resize;
             ((System.ComponentModel.ISupportInitialize)trackBar1).EndInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);
@@ -239,6 +256,7 @@
         private TrackBar trackBar1;
         private ContextMenuStrip contextMenuStrip1;
         private PictureBox pictureBox1;
-        private System.Windows.Forms.Timer timer1;
+        private TextBox txtFiltro;
+        private NotifyIcon notifyIcon1;
     }
 }

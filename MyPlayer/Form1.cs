@@ -1,13 +1,13 @@
 ﻿#define DEBUG
 
 using MyPlayer.classes.controleestados;
+using MyPlayer.classes.filtrarmusicas;
 using MyPlayer.classes.keyhook;
 using MyPlayer.classes.player;
 using MyPlayer.classes.util;
 using MyPlayer.classes.util.threads;
 using MyPlayer.classes.util.treeview;
 using MyPlayer.classes.waveimage;
-using NAudio.Wave;
 
 namespace MyPlayer
 {
@@ -28,6 +28,8 @@ namespace MyPlayer
 
         private WaveImage _wi;
 
+        private FiltrarMusicas _filtrarMusicas = FiltrarMusicas.Instance;
+
         public frmMyPlayer()
         {
             InitializeComponent();
@@ -38,6 +40,7 @@ namespace MyPlayer
 #if DEBUG
             AllocConsole();
 #endif
+            GlobalKeyboardHook.SetHook(handleKeyPress);
 
             InvokeAux.Access(lblStatus, lbl => lbl.Text = string.Empty);
             InvokeAux.Access(progressBar1, pg =>
@@ -66,21 +69,57 @@ namespace MyPlayer
             InvokeAux.Access(txtPathMusicas, txt => txt.Text = musicPath);
             TreeViewUtil.PreencherTreeView(treeView1, musicPath);
             ListarArquivos(musicPath);
-
-            GlobalKeyboardHook.SetHook(handleKeyPress);
         }
+
+        private void frmMyPlayer_Shown(object sender, EventArgs e)
+        {
+            InvokeAux.Access(txtFiltro, txt => txt.Focus());
+        }
+
+        #region systray
+        private void frmMyPlayer_Resize(object sender, EventArgs e)
+        {
+            //if (!chkSysTray.Checked) { return; }
+            if (FormWindowState.Minimized == this.WindowState)
+            {
+                notifyIcon1.Visible = true;
+                //notifyIcon1.ShowBalloonTip(500);
+                this.Hide();
+            }
+            else if (FormWindowState.Normal == this.WindowState)
+            {
+                notifyIcon1.Visible = false;
+            }
+        }
+
+
+        private void notifyIcon1_DoubleClick(object sender, EventArgs e)
+        {
+            this.Show();
+            this.Focus();
+            this.WindowState = FormWindowState.Normal;
+            this.ShowInTaskbar = true;
+            notifyIcon1.Visible = false;
+        }
+        #endregion
 
         private void frmMyPlayer_FormClosing(object sender, FormClosingEventArgs e)
         {
-            SalvarEstadoDoFormulario();
+            SalvarEstadoDoFormulario(true);
             GlobalKeyboardHook.Unhook();
         }
 
         #region controle estados
         private FormularioEstado _estadoAtual = new();
 
-        private void SalvarEstadoDoFormulario()
+        private void SalvarEstadoDoFormulario(bool clearFilter = true)
         {
+            if (clearFilter)
+            {
+                InvokeAux.Access(txtFiltro, txt => txt.Text = string.Empty);
+                _filtrarMusicas.Filtrar(string.Empty, listView1);
+            }
+
             if (_estadoAtual.ListVewStateProp == null) { _estadoAtual.ListVewStateProp = new(); }
             _estadoAtual.ListVewStateProp.View = (int)listView1.View;
             _estadoAtual.ListVewStateProp.ColumnWidths = [];
@@ -95,6 +134,7 @@ namespace MyPlayer
             var aux = ControleEstados.RecuperarEstado();
             if (aux == null) { return false; }
             _estadoAtual = aux;
+            _filtrarMusicas.SetEstado(_estadoAtual);
 
             //_indiceMusica = _estadoAtual.IndiceMusica;
 
@@ -152,13 +192,18 @@ namespace MyPlayer
         #region keypress
         private void handleKeyPress(Keys keys)
         {
-            //switch (keys)
-            //{
-            //    case Keys.MediaStop: stop(); break;
-            //    case Keys.MediaPlayPause: playPause(); break;
-            //    case Keys.MediaNextTrack: nextMusic(); break;
-            //    case Keys.MediaPreviousTrack: previousMusic(); break;
-            //}
+            switch (keys)
+            {
+                //case Keys.MediaStop: stop(); break;
+                case Keys.MediaPlayPause: playPause(); break;
+                case Keys.MediaNextTrack: nextMusic(); break;
+                case Keys.MediaPreviousTrack: previousMusic(); break;
+                case Keys.F3:
+                    {
+                        InvokeAux.Access(txtFiltro, txt => txt.Focus());
+                        break;
+                    }
+            }
         }
         #endregion
 
@@ -184,7 +229,7 @@ namespace MyPlayer
                         _estadoAtual.MusicPath = txt.Text;
                         TreeViewUtil.PreencherTreeView(treeView1, txt.Text);
 
-                        SalvarEstadoDoFormulario();
+                        SalvarEstadoDoFormulario(true);
                     });
                 }
             }
@@ -278,7 +323,7 @@ namespace MyPlayer
             if (!string.IsNullOrEmpty(caminho) && Directory.Exists(caminho))
             {
                 ListarArquivos(caminho);
-                SalvarEstadoDoFormulario();
+                SalvarEstadoDoFormulario(true);
             }
         }
         #endregion
@@ -391,6 +436,7 @@ namespace MyPlayer
 
                 // atualiza a lista de musicas
                 _estadoAtual.Musicas = GetListMusicas();
+                _filtrarMusicas.SetEstado(_estadoAtual);
             });
         }
 
@@ -437,7 +483,11 @@ namespace MyPlayer
             if (_estadoAtual.Musicas == null || _estadoAtual.Musicas.Count == 0) { return; }
 
             // Embaralha usando seu método Fisher–Yates
-            Util.Shuffle(_estadoAtual.Musicas);
+            _estadoAtual.Musicas = Util.Shuffle(_estadoAtual.Musicas) ?? [];
+            _filtrarMusicas.SetEstado(_estadoAtual);
+
+            SalvarEstadoDoFormulario(true);
+
             _skipToNext = _skipToPrevious = false;
 
             // Mantém as pastas no topo (opcional)
@@ -467,21 +517,22 @@ namespace MyPlayer
 
         private void btnVoltar_Click(object sender, EventArgs e)
         {
-            timer1.Stop();
-            _skipToPrevious = true;
-            //if (_playerControl != null && !_playerControl.IsPlaying) { _playerControl.Play(); }
-            _playerControl?.Stop();
-
-            if (_playerControl == null || !_playerControl.IsValid)
-            {
-                playMusic();
-            }
+            previousMusic();
         }
 
         private void btnPlayPause_Click(object sender, EventArgs e)
         {
-            timer1.Stop();
+            playPause();
+        }
 
+        private void btnProximo_Click(object sender, EventArgs e)
+        {
+            nextMusic();
+        }
+
+        #region btn aux
+        private void playPause()
+        {
             if (InvokeAux.GetValue(listView1, lvw => lvw.Items.Count) <= 0)
             {
                 _playerControl?.Stop();
@@ -509,9 +560,8 @@ namespace MyPlayer
             //Console.WriteLine($"_playerControl.IsPlaying: {_playerControl?.IsPlaying}, PlaybackStateProp: {_playerControl?.PlaybackStateProp}");
         }
 
-        private void btnProximo_Click(object sender, EventArgs e)
+        private void nextMusic()
         {
-            timer1.Stop();
             _skipToNext = true;
             _playerControl?.Stop();
 
@@ -524,6 +574,19 @@ namespace MyPlayer
             //isplaying = true;
         }
 
+        private void previousMusic()
+        {
+            _skipToPrevious = true;
+            //if (_playerControl != null && !_playerControl.IsPlaying) { _playerControl.Play(); }
+            _playerControl?.Stop();
+
+            if (_playerControl == null || !_playerControl.IsValid)
+            {
+                playMusic();
+            }
+        }
+
+        #endregion
 
         private void AtualizarSelecaoMusicaAtual()
         {
@@ -579,20 +642,13 @@ namespace MyPlayer
 
             if (_playerControl.AudioFileReaderProp != null)
             {
-                _wi = new(_playerControl.AudioFileReaderProp, this);
+                _wi = new(_playerControl.AudioFileReaderProp, this, width: pictureBox1.Width);
 
                 _wi.init(image =>
                 {
                     if (image == null) { return; }
                     pictureBox1.Image = image;
-                    timer1.Start(); //analisar o BeginInvoke
                 });
-
-                timer1.Start();
-            }
-            else
-            {
-                timer1.Stop();
             }
 
             Console.WriteLine($"🎵 Tocando música: {_estadoAtual.IndiceMusica}, {path}");
@@ -600,7 +656,7 @@ namespace MyPlayer
             // Atualiza seleção visual
             AtualizarSelecaoMusicaAtual();
 
-            SalvarEstadoDoFormulario();
+            SalvarEstadoDoFormulario(false);
         }
 
         #region eventos player
@@ -621,7 +677,6 @@ namespace MyPlayer
         private void Player_EvtPaused(object? sender, EventArgs e)
         {
             InvokeAux.Access(btnPlayPause, btn => btn.Text = ">");
-            timer1.Stop();
         }
 
         private void Player_EvtResume(object? sender, EventArgs e)
@@ -637,7 +692,6 @@ namespace MyPlayer
             InvokeAux.Access(lblStatus, lbl => lbl.Text = "Parado");
             InvokeAux.Access(progressBar1, pg => pg.Value = 0);
             InvokeAux.Access(trackBar1, tckbar => tckbar.Value = 0);
-            timer1.Stop();
         }
 
         private void Player_EvtMusicEnded(object? sender, EventArgs e)
@@ -661,7 +715,27 @@ namespace MyPlayer
             TimeSpan musicDuration = _playerControl.MusicDuration;
             InvokeAux.Access(lblStatus, lbl => lbl.Text = $"{currentTime:mm\\:ss} | {musicDuration:mm\\:ss}");
 
+            waveImageUpdate();
+
             //Console.WriteLine($"percent: {percent}");
+        }
+
+        private void waveImageUpdate()
+        {
+            //InvokeRequiredUtil.InvokeIfRequired(trackBar, () =>{try { trackBar.Value = Convert.ToInt32(Math.Min(audioFile.Position, audioFile.Length)); } catch { }});
+
+            //var audioFile = _playerControl.AudioFileReaderProp;
+
+            //double ms = audioFile.Position * 1000.0 / audioFile.WaveFormat.BitsPerSample / audioFile.WaveFormat.Channels * 8 / audioFile.WaveFormat.SampleRate;
+            //double maxMs = audioFile.Length * 1000.0 / audioFile.WaveFormat.BitsPerSample / audioFile.WaveFormat.Channels * 8 / audioFile.WaveFormat.SampleRate;
+            //musicTime($"{TimeSpan.FromMilliseconds(ms).ToString(@"hh\:mm\:ss")} - {TimeSpan.FromMilliseconds(maxMs).ToString(@"hh\:mm\:ss")}");
+
+            #region pictureBox1
+            Image? image = _wi.getUpdateImage();
+            if (image == null) { return; }
+
+            InvokeAux.Access(pictureBox1, pct => pct.Image = image);
+            #endregion
         }
         #endregion
 
@@ -690,23 +764,35 @@ namespace MyPlayer
 
         #endregion
 
-        private void timer1_Tick(object sender, EventArgs e)
+        #region txtfiltro
+        private void txtFiltro_TextChanged(object sender, EventArgs e)
         {
-            //InvokeRequiredUtil.InvokeIfRequired(trackBar, () =>{try { trackBar.Value = Convert.ToInt32(Math.Min(audioFile.Position, audioFile.Length)); } catch { }});
-
-            var audioFile = _playerControl.AudioFileReaderProp;
-
-            double ms = audioFile.Position * 1000.0 / audioFile.WaveFormat.BitsPerSample / audioFile.WaveFormat.Channels * 8 / audioFile.WaveFormat.SampleRate;
-            double maxMs = audioFile.Length * 1000.0 / audioFile.WaveFormat.BitsPerSample / audioFile.WaveFormat.Channels * 8 / audioFile.WaveFormat.SampleRate;
-            //musicTime($"{TimeSpan.FromMilliseconds(ms).ToString(@"hh\:mm\:ss")} - {TimeSpan.FromMilliseconds(maxMs).ToString(@"hh\:mm\:ss")}");
-
-            #region pictureBox1
-            Image? image = _wi.getUpdateImage();
-            if (image == null) { return; }
-
-            InvokeAux.Access(pictureBox1, pct => pct.Image = image);
-            #endregion
+            _filtrarMusicas.Filtrar(txtFiltro.Text, listView1);
         }
+
+        private void txtFiltro_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                if (listView1.Items.Count <= 0) { return; }
+                playPause();
+            }
+            else if (e.KeyCode == Keys.Escape)
+            {
+                txtFiltro.Clear();
+                _filtrarMusicas.Filtrar(string.Empty, listView1);
+                //filtrarMusicasDataGrid?.filtrarMusicas(txtFiltro.Text);
+            }
+            else if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Left)
+            {
+                previousMusic();
+            }
+            else if (e.KeyCode == Keys.Down || e.KeyCode == Keys.Right)
+            {
+                nextMusic();
+            }
+        }
+        #endregion
 
     }
 }

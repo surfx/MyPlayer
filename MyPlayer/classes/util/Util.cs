@@ -5,8 +5,9 @@
         /**
          * Fisher–Yates
          */
-        public static void Shuffle(List<ListViewItem> list)
+        public static List<ListViewItem>? Shuffle(List<ListViewItem> list)
         {
+            if (list == null || list.Count <= 0) { return list; }
             Random rng = new();
             int n = list.Count;
             while (n > 1)
@@ -15,6 +16,7 @@
                 int k = rng.Next(n + 1);
                 (list[k], list[n]) = (list[n], list[k]);
             }
+            return list;
         }
 
         public static async Task WaitWhileAsync(Func<bool> condition, int checkIntervalMs = 500)

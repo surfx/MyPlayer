@@ -6,10 +6,15 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>recursos\mp3-audio-file-outlined.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="MyPlayer.csproj.Backup.tmp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="recursos\mp3-audio-file-outlined.ico" />
   </ItemGroup>
 
   <ItemGroup>
