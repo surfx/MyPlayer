@@ -1,4 +1,4 @@
-# My Player Console
+# My Player
 
 Player de música em C# utilizando NAudio
 

@@ -27,12 +27,16 @@ namespace MyPlayer
         private PlayerControl? _playerControl;
         private bool listViewDblClick = false;
         private const bool PermitirSystray = false;
+        private bool _skipStopAnaliseMusica = false;
+        private bool _skipPlayMusica = false;
 
         private WaveImage _wi;
 
         private FiltrarMusicas _filtrarMusicas = FiltrarMusicas.Instance;
 
         private enum EImageIndex : int { play = 3, pause = 9 }
+
+        #region form
 
         public frmMyPlayer()
         {
@@ -65,6 +69,7 @@ namespace MyPlayer
 
             if (CarregarEstadoDoFormulario())
             {
+                playMusic();
                 return;
             }
 
@@ -73,6 +78,7 @@ namespace MyPlayer
             InvokeAux.Access(txtPathMusicas, txt => txt.Text = musicPath);
             TreeViewUtil.PreencherTreeView(treeView1, musicPath);
             ListarArquivos(musicPath);
+            playMusic();
         }
 
         private void frmMyPlayer_Shown(object sender, EventArgs e)
@@ -83,14 +89,14 @@ namespace MyPlayer
         #region systray
         private void frmMyPlayer_Resize(object sender, EventArgs e)
         {
-            if (!PermitirSystray) { return; }
-
             //if (!chkSysTray.Checked) { return; }
             if (FormWindowState.Minimized == this.WindowState)
             {
                 notifyIcon1.Visible = true;
                 //notifyIcon1.ShowBalloonTip(500);
-                this.Hide();
+
+                if (!PermitirSystray) { return; }
+                //this.Hide();
             }
             else if (FormWindowState.Normal == this.WindowState)
             {
@@ -114,6 +120,9 @@ namespace MyPlayer
             SalvarEstadoDoFormulario(true);
             GlobalKeyboardHook.Unhook();
         }
+
+        #endregion
+
 
         #region controle estados
         private FormularioEstado _estadoAtual = new();
@@ -200,7 +209,7 @@ namespace MyPlayer
         {
             switch (keys)
             {
-                //case Keys.MediaStop: stop(); break;
+                case Keys.MediaStop: stop(); break;
                 case Keys.MediaPlayPause: playPause(); break;
                 case Keys.MediaNextTrack: nextMusic(); break;
                 case Keys.MediaPreviousTrack: previousMusic(); break;
@@ -442,6 +451,7 @@ namespace MyPlayer
 
                 // atualiza a lista de musicas
                 _estadoAtual.Musicas = GetListMusicas();
+                _estadoAtual.IndiceMusica = 0;
                 _filtrarMusicas.SetEstado(_estadoAtual);
             });
         }
@@ -490,7 +500,9 @@ namespace MyPlayer
 
             // Embaralha usando seu método Fisher–Yates
             _estadoAtual.Musicas = Util.Shuffle(_estadoAtual.Musicas) ?? [];
+            _estadoAtual.IndiceMusica = 0;
             _filtrarMusicas.SetEstado(_estadoAtual);
+            _skipStopAnaliseMusica = true;
 
             SalvarEstadoDoFormulario(true);
 
@@ -566,6 +578,19 @@ namespace MyPlayer
             //Console.WriteLine($"_playerControl.IsPlaying: {_playerControl?.IsPlaying}, PlaybackStateProp: {_playerControl?.PlaybackStateProp}");
         }
 
+        private void stop()
+        {
+            updateFormTitle(true);
+            _skipStopAnaliseMusica = _skipPlayMusica = true;
+            Player_ProgressUpdated(null, 0.0d);
+            InvokeAux.Access(pictureBox1, pct => pct.Image = null);
+
+            _playerControl?.Stop();
+            _playerControl?.Dispose();
+            _playerControl = null;
+            //InvokeAux.Access(btnPlayPause, btn => btn.ImageIndex = (int)EImageIndex.play);
+        }
+
         private void nextMusic()
         {
             _skipToNext = true;
@@ -626,6 +651,8 @@ namespace MyPlayer
 
         private void playMusic()
         {
+            if (_skipPlayMusica) { _skipPlayMusica = false; return; }
+
             _estadoAtual.Musicas ??= GetListMusicas();
             if (_estadoAtual.Musicas == null || _estadoAtual.Musicas.Count == 0) return;
 
@@ -666,8 +693,10 @@ namespace MyPlayer
         }
 
         #region eventos player
-        private void updateFormTitle(bool reset = false, string status = "") {
-            if (reset) {
+        private void updateFormTitle(bool reset = false, string status = "")
+        {
+            if (reset)
+            {
                 InvokeAux.Access(this, frm => frm.Text = "My Player");
             }
             if (_estadoAtual.IndiceMusica >= 0 && _estadoAtual.IndiceMusica < _estadoAtual.Musicas.Count)
@@ -675,7 +704,8 @@ namespace MyPlayer
                 ListViewItem itemAtual = _estadoAtual.Musicas[_estadoAtual.IndiceMusica];
                 string nomeSemExtensao = Path.GetFileNameWithoutExtension(itemAtual.Text);
                 string title = $"My Player | {nomeSemExtensao}";
-                if (!string.IsNullOrEmpty(status)) {
+                if (!string.IsNullOrEmpty(status))
+                {
                     title = $"{title} | {status}";
                 }
                 InvokeAux.Access(this, frm => frm.Text = title);
@@ -782,6 +812,7 @@ namespace MyPlayer
 
         private void analiseIndiceMusica()
         {
+            if (_skipStopAnaliseMusica) { _skipStopAnaliseMusica = false; return; }
             if (listViewDblClick) { listViewDblClick = false; return; }
             _estadoAtual.Musicas ??= GetListMusicas();
             if (_estadoAtual.Musicas == null || _estadoAtual.Musicas.Count == 0) return;
@@ -825,6 +856,10 @@ namespace MyPlayer
             else if (e.KeyCode == Keys.Down || e.KeyCode == Keys.Right)
             {
                 nextMusic();
+            }
+            else if (e.KeyCode == Keys.Enter)
+            {
+                playMusic();
             }
         }
         #endregion
