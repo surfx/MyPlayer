@@ -95,6 +95,7 @@
             imageList1.Images.SetKeyName(7, "icons8-treble-clef-20.png");
             imageList1.Images.SetKeyName(8, "icons8-folder-20.png");
             imageList1.Images.SetKeyName(9, "icons8-pause-20.png");
+            imageList1.Images.SetKeyName(10, "icons8-mp3-26.png");
             // 
             // treeView1
             // 

@@ -434,7 +434,7 @@ namespace MyPlayer
 
                         ListViewItem item = new(nome)
                         {
-                            ImageIndex = 2, // ícone de arquivo
+                            ImageIndex = 10, // ícone de arquivo mp3
                             Tag = fi.FullName
                         };
                         item.SubItems.Add((fi.Length / 1024).ToString());
