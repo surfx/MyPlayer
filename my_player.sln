@@ -1,0 +1,29 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MyPlayer", "MyPlayer", "{7C2D7262-7192-010A-274B-410CD7090CBD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyPlayer", "MyPlayer\MyPlayer\MyPlayer.csproj", "{AC101C73-8FF9-2CDE-F0ED-45B47997D905}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AC101C73-8FF9-2CDE-F0ED-45B47997D905}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC101C73-8FF9-2CDE-F0ED-45B47997D905}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC101C73-8FF9-2CDE-F0ED-45B47997D905}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC101C73-8FF9-2CDE-F0ED-45B47997D905}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{AC101C73-8FF9-2CDE-F0ED-45B47997D905} = {7C2D7262-7192-010A-274B-410CD7090CBD}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6197C7DE-362D-4C25-9FA1-77DAAAF7F25B}
+	EndGlobalSection
+EndGlobal
