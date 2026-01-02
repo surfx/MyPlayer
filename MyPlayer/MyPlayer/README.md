@@ -1,8 +1,8 @@
 # My Player
 
-Player de mï¿½sica em C# utilizando NAudio
+Player de música em C# utilizando NAudio
 
-![My Player](MyPlayer/recursos/my_player.png)
+![My Player](MyPlayer/recursos/Captura%20de%20tela%202025-10-14%20200913.png)
 
 # Libs
 
@@ -13,9 +13,9 @@ Player de mï¿½sica em C# utilizando NAudio
 - [X] controle de estados simples
 - [ ] filtros
 - [ ] estado treeview
-- [ ] permitir adicionar vï¿½rias pastas
+- [ ] permitir adicionar várias pastas
 - [ ] salvar / abrir playlist ?
-- [ ] botï¿½es para primeira e ï¿½ltima mï¿½sica ?
+- [ ] botões para primeira e última música ?
 - [ ] dark theme ?
 
 # Urls

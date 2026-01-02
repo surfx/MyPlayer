@@ -89,13 +89,13 @@ namespace MyPlayer
         #region systray
         private void frmMyPlayer_Resize(object sender, EventArgs e)
         {
-            if (!PermitirSystray) { return; }
-
             //if (!chkSysTray.Checked) { return; }
             if (FormWindowState.Minimized == this.WindowState)
             {
                 notifyIcon1.Visible = true;
                 //notifyIcon1.ShowBalloonTip(500);
+
+                if (!PermitirSystray) { return; }
                 //this.Hide();
             }
             else if (FormWindowState.Normal == this.WindowState)
@@ -428,12 +428,11 @@ namespace MyPlayer
 
                         FileInfo fi = new(arquivo);
                         string nome = fi.Name;
-                        string nomeSemExtensao = Path.GetFileNameWithoutExtension(nome);
 
-                        if (nomeSemExtensao.Length > maxFileStr)
-                            nomeSemExtensao = nomeSemExtensao.Substring(0, maxFileStr) + "...";
+                        if (nome.Length > maxFileStr)
+                            nome = nome.Substring(0, maxFileStr) + "...";
 
-                        ListViewItem item = new(nomeSemExtensao)
+                        ListViewItem item = new(nome)
                         {
                             ImageIndex = 10, // ícone de arquivo mp3
                             Tag = fi.FullName
