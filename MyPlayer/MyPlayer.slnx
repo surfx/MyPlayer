@@ -2,5 +2,5 @@
   <Folder Name="/Itens de Solução/">
     <File Path="README.md" />
   </Folder>
-  <Project Path="MyPlayer/MyPlayer.csproj" />
+  <Project Path="MyPlayer.csproj" />
 </Solution>
