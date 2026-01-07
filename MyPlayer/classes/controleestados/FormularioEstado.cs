@@ -1,11 +1,13 @@
-﻿namespace MyPlayer.classes.controleestados
+﻿using MyPlayer.classes.playlist;
+
+namespace MyPlayer.classes.controleestados
 {
     internal class FormularioEstado
     {
         public string MusicPath { get; set; }
         public int IndiceMusica { get; set; }
-        public List<ListViewItem> Musicas { get; set; }
-
+        // Use o DTO aqui para garantir compatibilidade com JSON
+        public List<MusicaDTO> Musicas { get; set; } = new List<MusicaDTO>();
         public ListVewState ListVewStateProp { get; set; }
 
         public override string ToString()

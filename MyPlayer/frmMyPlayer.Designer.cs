@@ -48,6 +48,9 @@
             txtFiltro = new TextBox();
             notifyIcon1 = new NotifyIcon(components);
             pictureBox2 = new PictureBox();
+            btnCarregarMusicasPlayList = new Button();
+            btnSalvarMusicasPlayList = new Button();
+            btnExcluirMusicasPlayList = new Button();
             ((System.ComponentModel.ISupportInitialize)trackBar1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox2).BeginInit();
@@ -96,6 +99,9 @@
             imageList1.Images.SetKeyName(8, "icons8-folder-20.png");
             imageList1.Images.SetKeyName(9, "icons8-pause-20.png");
             imageList1.Images.SetKeyName(10, "icons8-mp3-26.png");
+            imageList1.Images.SetKeyName(11, "icons8-upload-20.png");
+            imageList1.Images.SetKeyName(12, "icons8-save-20.png");
+            imageList1.Images.SetKeyName(13, "icons8-remove-20.png");
             // 
             // treeView1
             // 
@@ -110,7 +116,9 @@
             // 
             // listView1
             // 
+            listView1.CheckBoxes = true;
             listView1.ContextMenuStrip = contextMenuStrip1;
+            listView1.FullRowSelect = true;
             listView1.LargeImageList = imageList1;
             listView1.Location = new Point(305, 53);
             listView1.Name = "listView1";
@@ -118,6 +126,8 @@
             listView1.SmallImageList = imageList1;
             listView1.TabIndex = 4;
             listView1.UseCompatibleStateImageBehavior = false;
+            listView1.ColumnClick += listView1_ColumnClick;
+            listView1.ItemChecked += listView1_ItemChecked;
             listView1.DoubleClick += listView1_DoubleClick;
             listView1.MouseDown += listView1_MouseDown;
             // 
@@ -131,7 +141,7 @@
             // 
             btnRandomizar.ImageIndex = 6;
             btnRandomizar.ImageList = imageList1;
-            btnRandomizar.Location = new Point(13, 459);
+            btnRandomizar.Location = new Point(11, 497);
             btnRandomizar.Name = "btnRandomizar";
             btnRandomizar.Size = new Size(41, 34);
             btnRandomizar.TabIndex = 6;
@@ -142,7 +152,7 @@
             // 
             btnVoltar.ImageIndex = 4;
             btnVoltar.ImageList = imageList1;
-            btnVoltar.Location = new Point(60, 459);
+            btnVoltar.Location = new Point(58, 497);
             btnVoltar.Name = "btnVoltar";
             btnVoltar.Size = new Size(41, 34);
             btnVoltar.TabIndex = 7;
@@ -153,7 +163,7 @@
             // 
             btnPlayPause.ImageIndex = 3;
             btnPlayPause.ImageList = imageList1;
-            btnPlayPause.Location = new Point(107, 459);
+            btnPlayPause.Location = new Point(105, 497);
             btnPlayPause.Name = "btnPlayPause";
             btnPlayPause.Size = new Size(41, 34);
             btnPlayPause.TabIndex = 8;
@@ -164,7 +174,7 @@
             // 
             btnProximo.ImageIndex = 5;
             btnProximo.ImageList = imageList1;
-            btnProximo.Location = new Point(154, 459);
+            btnProximo.Location = new Point(152, 497);
             btnProximo.Name = "btnProximo";
             btnProximo.Size = new Size(41, 34);
             btnProximo.TabIndex = 9;
@@ -174,7 +184,7 @@
             // lblStatus
             // 
             lblStatus.AutoSize = true;
-            lblStatus.Location = new Point(763, 464);
+            lblStatus.Location = new Point(761, 502);
             lblStatus.Name = "lblStatus";
             lblStatus.Size = new Size(60, 25);
             lblStatus.TabIndex = 10;
@@ -182,14 +192,14 @@
             // 
             // progressBar1
             // 
-            progressBar1.Location = new Point(931, 459);
+            progressBar1.Location = new Point(929, 497);
             progressBar1.Name = "progressBar1";
             progressBar1.Size = new Size(182, 34);
             progressBar1.TabIndex = 11;
             // 
             // trackBar1
             // 
-            trackBar1.Location = new Point(213, 459);
+            trackBar1.Location = new Point(211, 497);
             trackBar1.Name = "trackBar1";
             trackBar1.Size = new Size(520, 69);
             trackBar1.TabIndex = 12;
@@ -197,7 +207,7 @@
             // 
             // pictureBox1
             // 
-            pictureBox1.Location = new Point(13, 509);
+            pictureBox1.Location = new Point(11, 547);
             pictureBox1.Name = "pictureBox1";
             pictureBox1.Size = new Size(1098, 75);
             pictureBox1.TabIndex = 13;
@@ -206,7 +216,7 @@
             // 
             // txtFiltro
             // 
-            txtFiltro.Location = new Point(13, 406);
+            txtFiltro.Location = new Point(11, 452);
             txtFiltro.Name = "txtFiltro";
             txtFiltro.Size = new Size(1098, 31);
             txtFiltro.TabIndex = 14;
@@ -230,11 +240,48 @@
             pictureBox2.TabIndex = 15;
             pictureBox2.TabStop = false;
             // 
+            // btnCarregarMusicasPlayList
+            // 
+            btnCarregarMusicasPlayList.ImageIndex = 11;
+            btnCarregarMusicasPlayList.ImageList = imageList1;
+            btnCarregarMusicasPlayList.Location = new Point(107, 406);
+            btnCarregarMusicasPlayList.Name = "btnCarregarMusicasPlayList";
+            btnCarregarMusicasPlayList.Size = new Size(41, 34);
+            btnCarregarMusicasPlayList.TabIndex = 18;
+            btnCarregarMusicasPlayList.UseVisualStyleBackColor = true;
+            btnCarregarMusicasPlayList.Click += btnCarregarMusicasPlayList_Click;
+            // 
+            // btnSalvarMusicasPlayList
+            // 
+            btnSalvarMusicasPlayList.ImageIndex = 12;
+            btnSalvarMusicasPlayList.ImageList = imageList1;
+            btnSalvarMusicasPlayList.Location = new Point(60, 406);
+            btnSalvarMusicasPlayList.Name = "btnSalvarMusicasPlayList";
+            btnSalvarMusicasPlayList.Size = new Size(41, 34);
+            btnSalvarMusicasPlayList.TabIndex = 17;
+            btnSalvarMusicasPlayList.UseVisualStyleBackColor = true;
+            btnSalvarMusicasPlayList.Click += btnSalvarMusicasPlayList_Click;
+            // 
+            // btnExcluirMusicasPlayList
+            // 
+            btnExcluirMusicasPlayList.Enabled = false;
+            btnExcluirMusicasPlayList.ImageIndex = 13;
+            btnExcluirMusicasPlayList.ImageList = imageList1;
+            btnExcluirMusicasPlayList.Location = new Point(13, 406);
+            btnExcluirMusicasPlayList.Name = "btnExcluirMusicasPlayList";
+            btnExcluirMusicasPlayList.Size = new Size(41, 34);
+            btnExcluirMusicasPlayList.TabIndex = 16;
+            btnExcluirMusicasPlayList.UseVisualStyleBackColor = true;
+            btnExcluirMusicasPlayList.Click += btnExcluirMusicasPlayList_Click;
+            // 
             // frmMyPlayer
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1123, 603);
+            ClientSize = new Size(1123, 643);
+            Controls.Add(btnCarregarMusicasPlayList);
+            Controls.Add(btnSalvarMusicasPlayList);
+            Controls.Add(btnExcluirMusicasPlayList);
             Controls.Add(pictureBox2);
             Controls.Add(txtFiltro);
             Controls.Add(pictureBox1);
@@ -286,5 +333,8 @@
         private TextBox txtFiltro;
         private NotifyIcon notifyIcon1;
         private PictureBox pictureBox2;
+        private Button btnCarregarMusicasPlayList;
+        private Button btnSalvarMusicasPlayList;
+        private Button btnExcluirMusicasPlayList;
     }
 }

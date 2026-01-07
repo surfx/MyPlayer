@@ -1,4 +1,5 @@
 ﻿using MyPlayer.classes.controleestados;
+using MyPlayer.classes.playlist;
 using MyPlayer.classes.util.threads;
 
 namespace MyPlayer.classes.filtrarmusicas
@@ -9,7 +10,7 @@ namespace MyPlayer.classes.filtrarmusicas
     internal class FiltrarMusicas
     {
         private FormularioEstado? _estado;
-        private List<ListViewItem>? _memory;
+        private List<MusicaDTO>? _memory;
 
         private static FiltrarMusicas? _instance = null;
         private FiltrarMusicas() { }
@@ -51,9 +52,37 @@ namespace MyPlayer.classes.filtrarmusicas
             InvokeAux.Access(listView, lvw =>
             {
                 lvw.BeginUpdate();
-                lvw.Items.Clear();
-                if (_estado.Musicas.Count > 0) lvw.Items.AddRange(_estado.Musicas.ToArray());
-                lvw.EndUpdate();
+                try
+                {
+                    lvw.Items.Clear();
+
+                    // Agora percorremos a lista de DTOs para criar os itens visuais
+                    foreach (var mDto in _estado.Musicas)
+                    {
+                        // Coluna 1: Nome (Texto principal)
+                        ListViewItem item = new ListViewItem(mDto.Text)
+                        {
+                            Tag = mDto.Tag,
+                            ImageIndex = mDto.ImageIndex
+                        };
+
+                        // Adiciona os demais SubItems (Tamanho, Data, etc.)
+                        // Como mDto.SubItems é uma List<string>, adicionamos direto
+                        if (mDto.SubItems != null)
+                        {
+                            foreach (var subText in mDto.SubItems)
+                            {
+                                item.SubItems.Add(subText);
+                            }
+                        }
+
+                        lvw.Items.Add(item);
+                    }
+                }
+                finally
+                {
+                    lvw.EndUpdate();
+                }
             });
         }
 

@@ -1,19 +1,24 @@
-﻿namespace MyPlayer.classes.util
+﻿using MyPlayer.classes.playlist;
+
+namespace MyPlayer.classes.util
 {
     internal class Util
     {
         /**
-         * Fisher–Yates
+         * Fisher–Yates Shuffle adaptado para MusicaDTO
          */
-        public static List<ListViewItem>? Shuffle(List<ListViewItem> list)
+        public static List<MusicaDTO>? Shuffle(List<MusicaDTO> list)
         {
+            // Se a lista for nula ou vazia, retorna como está
             if (list == null || list.Count <= 0) { return list; }
+
             Random rng = new();
             int n = list.Count;
             while (n > 1)
             {
                 n--;
                 int k = rng.Next(n + 1);
+                // Swap (Troca) usando tuplas, agora com DTOs
                 (list[k], list[n]) = (list[n], list[k]);
             }
             return list;

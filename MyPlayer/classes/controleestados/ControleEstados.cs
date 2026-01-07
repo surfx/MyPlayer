@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using MyPlayer.classes.playlist;
+using System.Text.Json;
 
 namespace MyPlayer.classes.controleestados
 {
@@ -39,7 +40,7 @@ namespace MyPlayer.classes.controleestados
                     for (int i = 1; i < item.SubItems.Count; i++)
                     {
                         var sub = item.SubItems[i];
-                        sItem.SubItems.Add(sub.Text);
+                        sItem.SubItems.Add(sub);
                     }
 
                     serializavel.Musicas.Add(sItem);
@@ -65,31 +66,37 @@ namespace MyPlayer.classes.controleestados
                     return null;
 
                 var json = File.ReadAllText(EstadoPath);
+                // O JSON agora mapeia diretamente para a estrutura de DTOs
                 var serializavel = JsonSerializer.Deserialize<SerializableFormularioEstado>(json);
+
+                if (serializavel == null) return null;
 
                 var estado = new FormularioEstado
                 {
                     MusicPath = serializavel.MusicPath,
                     IndiceMusica = serializavel.IndiceMusica,
-                    ListVewStateProp = new(){ 
+                    ListVewStateProp = new()
+                    {
                         View = serializavel.View,
                         ColumnWidths = serializavel.ColumnWidths
                     },
-                    Musicas = new List<ListViewItem>()
+                    // Inicializamos a lista de DTOs
+                    Musicas = new List<MusicaDTO>()
                 };
 
+                // Mapeamos os itens do JSON para a nossa lista de Musicas (DTO)
                 foreach (var sItem in serializavel.Musicas)
                 {
-                    var item = new ListViewItem(sItem.Text)
+                    var musicaDto = new MusicaDTO
                     {
+                        Text = sItem.Text,
                         ImageIndex = sItem.ImageIndex,
-                        Tag = sItem.Tag
+                        Tag = sItem.Tag,
+                        // Clonamos os subitens para a lista de strings
+                        SubItems = sItem.SubItems.ToList()
                     };
 
-                    foreach (var sub in sItem.SubItems)
-                        item.SubItems.Add(sub);
-
-                    estado.Musicas.Add(item);
+                    estado.Musicas.Add(musicaDto);
                 }
 
                 return estado;
