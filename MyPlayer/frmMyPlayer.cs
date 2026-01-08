@@ -68,17 +68,17 @@ namespace MyPlayer
 
             _skipToNext = _skipToPrevious = false;
 
-            //if (CarregarEstadoDoFormulario())
-            //{
-            //    playMusic();
-            //    return;
-            //}
+            if (CarregarEstadoDoFormulario())
+            {
+                playMusic();
+                return;
+            }
 
             string musicPath = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
             musicPath = musicPath.EndsWith(@"\") ? musicPath : musicPath + @"\";
             InvokeAux.Access(txtPathMusicas, txt => txt.Text = musicPath);
             TreeViewUtil.PreencherTreeView(treeView1, musicPath);
-            ListarArquivos(musicPath);
+            ListarArquivos(musicPath, false);
             playMusic();
         }
 
@@ -127,104 +127,101 @@ namespace MyPlayer
         #region controle estados
         private FormularioEstado _estadoAtual = new();
 
-        //private void SalvarEstadoDoFormulario(bool clearFilter = true)
-        //{
-        //    if (clearFilter)
-        //    {
-        //        InvokeAux.Access(txtFiltro, txt => txt.Text = string.Empty);
-        //        _filtrarMusicas.Filtrar(string.Empty, listView1);
-        //    }
+        private void SalvarEstadoDoFormulario(bool clearFilter = true)
+        {
+            if (clearFilter)
+            {
+                InvokeAux.Access(txtFiltro, txt => txt.Text = string.Empty);
+                _filtrarMusicas.Filtrar(string.Empty, listView1);
+            }
 
-        //    if (_estadoAtual.ListVewStateProp == null) { _estadoAtual.ListVewStateProp = new(); }
-        //    _estadoAtual.ListVewStateProp.View = (int)listView1.View;
-        //    _estadoAtual.ListVewStateProp.ColumnWidths = [];
-        //    foreach (ColumnHeader col in listView1.Columns)
-        //        _estadoAtual.ListVewStateProp.ColumnWidths.Add(col.Width);
+            if (_estadoAtual.ListVewStateProp == null) { _estadoAtual.ListVewStateProp = new(); }
+            _estadoAtual.ListVewStateProp.View = (int)listView1.View;
+            _estadoAtual.ListVewStateProp.ColumnWidths = [];
+            foreach (ColumnHeader col in listView1.Columns)
+                _estadoAtual.ListVewStateProp.ColumnWidths.Add(col.Width);
 
-        //    ControleEstados.SalvarEstado(_estadoAtual);
-        //}
+            ControleEstados.SalvarEstado(_estadoAtual);
+        }
 
-        //private bool CarregarEstadoDoFormulario()
-        //{
-        //    var aux = ControleEstados.RecuperarEstado();
-        //    if (aux == null) { return false; }
-        //    _estadoAtual = aux;
-        //    _filtrarMusicas.SetEstado(_estadoAtual);
+        private bool CarregarEstadoDoFormulario()
+        {
+            var aux = ControleEstados.RecuperarEstado();
+            if (aux == null) { return false; }
+            _estadoAtual = aux;
+            _filtrarMusicas.SetEstado(_estadoAtual);
 
-        //    //_indiceMusica = _estadoAtual.IndiceMusica;
+            //_indiceMusica = _estadoAtual.IndiceMusica;
 
-        //    if (_estadoAtual.ListVewStateProp == null)
-        //    {
-        //        _estadoAtual.ListVewStateProp = new()
-        //        {
-        //            View = (int)View.Details,
-        //            ColumnWidths = [150, 100, 150]
-        //        };
-        //    }
+            _estadoAtual.ListVewStateProp ??= new()
+                {
+                    View = (int)View.Details,
+                    ColumnWidths = [150, 100, 150]
+                };
 
-        //    InvokeAux.Access(listView1, lvw =>
-        //    {
-        //        lvw.BeginUpdate();
-        //        lvw.Items.Clear();
-        //        lvw.View = (View)_estadoAtual.ListVewStateProp.View; // importante restaurar a View
-        //        lvw.SmallImageList = imageList1;
+            InvokeAux.Access(listView1, lvw =>
+            {
+                lvw.BeginUpdate();
+                lvw.Items.Clear();
+                lvw.View = (View)_estadoAtual.ListVewStateProp.View; // importante restaurar a View
+                lvw.SmallImageList = imageList1;
 
-        //        // Restaurar colunas se quiser
-        //        lvw.Columns.Clear();
-        //        lvw.CheckBoxes = true;
-        //        lvw.FullRowSelect = true;
+                // Restaurar colunas se quiser
+                lvw.Columns.Clear();
+                lvw.CheckBoxes = true;
+                lvw.FullRowSelect = true;
 
-        //        lvw.Columns.Add("Nome", _estadoAtual.ListVewStateProp.ColumnWidths[0]);
-        //        lvw.Columns.Add("Tamanho (KB)", _estadoAtual.ListVewStateProp.ColumnWidths[1]);
-        //        lvw.Columns.Add("Data de Modificação", _estadoAtual.ListVewStateProp.ColumnWidths[2]);
+                lvw.Columns.Add("Nome", _estadoAtual.ListVewStateProp.ColumnWidths[0]);
+                lvw.Columns.Add("Tamanho (KB)", _estadoAtual.ListVewStateProp.ColumnWidths[1]);
+                lvw.Columns.Add("Data de Modificação", _estadoAtual.ListVewStateProp.ColumnWidths[2]);
 
-        //        foreach (var sItem in _estadoAtual.Musicas)
-        //        {
-        //            ListViewItem item = new(sItem.Text)
-        //            {
-        //                Tag = sItem.Tag,
-        //                ImageIndex = sItem.ImageIndex,
-        //                Checked = sItem.Checked
-        //            };
-        //            // Pula o primeiro subitem (índice 0) para não duplicar o nome na coluna de tamanho
-        //            foreach (var sub in sItem.SubItems.Cast<ListViewItem.ListViewSubItem>().Skip(1))
-        //            {
-        //                item.SubItems.Add(new ListViewItem.ListViewSubItem(item, sub.Text));
-        //            }
+                foreach (var sItem in _estadoAtual.Musicas)
+                {
+                    ListViewItem item = new(sItem.Text)
+                    {
+                        Tag = sItem.Tag,
+                        ImageIndex = sItem.ImageIndex
+                        //Checked = sItem.Checked
+                    };
+                    // Pula o primeiro subitem (índice 0) para não duplicar o nome na coluna de tamanho
+                    foreach (var subText in sItem.SubItems)
+                    {
+                        item.SubItems.Add(subText);
+                    }
 
-        //            lvw.Items.Add(item);
-        //        }
+                    lvw.Items.Add(item);
+                }
 
 
-        //        // No construtor ou Load do Form, assine o evento
-        //        listView1.ColumnClick += (s, e) =>
-        //        {
-        //            if (e.Column == 0) // Se clicou na coluna "Nome"
-        //            {
-        //                bool todosMarcados = listView1.CheckedItems.Count == listView1.Items.Count;
+                // No construtor ou Load do Form, assine o evento
+                listView1.ColumnClick += (s, e) =>
+                {
+                    if (e.Column == 0) // Se clicou na coluna "Nome"
+                    {
+                        bool todosMarcados = listView1.CheckedItems.Count == listView1.Items.Count;
 
-        //                listView1.BeginUpdate();
-        //                foreach (ListViewItem item in listView1.Items)
-        //                {
-        //                    item.Checked = !todosMarcados; // Inverte a seleção de todos
-        //                }
-        //                listView1.EndUpdate();
-        //            }
-        //        };
+                        listView1.BeginUpdate();
+                        foreach (ListViewItem item in listView1.Items)
+                        {
+                            item.Checked = !todosMarcados; // Inverte a seleção de todos
+                        }
+                        listView1.EndUpdate();
+                    }
+                };
 
-        //        lvw.EndUpdate();
-        //    });
+                lvw.EndUpdate();
+            });
 
-        //    AtualizarSelecaoMusicaAtual();
+            AtualizarSelecaoMusicaAtual();
 
-        //    if (!string.IsNullOrEmpty(_estadoAtual.MusicPath))
-        //    {
-        //        InvokeAux.Access(txtPathMusicas, txt => txt.Text = _estadoAtual.MusicPath);
-        //        TreeViewUtil.PreencherTreeView(treeView1, _estadoAtual.MusicPath);
-        //    }
+            if (!string.IsNullOrEmpty(_estadoAtual.MusicPath))
+            {
+                InvokeAux.Access(txtPathMusicas, txt => txt.Text = _estadoAtual.MusicPath);
+                TreeViewUtil.PreencherTreeView(treeView1, _estadoAtual.MusicPath);
+            }
 
-        //    return true;
-        //}
+            return true;
+        }
         #endregion
 
 
@@ -268,7 +265,7 @@ namespace MyPlayer
                         _estadoAtual.MusicPath = txt.Text;
                         TreeViewUtil.PreencherTreeView(treeView1, txt.Text);
 
-                        //SalvarEstadoDoFormulario(true);
+                        SalvarEstadoDoFormulario(true);
                     });
                 }
             }
@@ -361,8 +358,8 @@ namespace MyPlayer
 
             if (!string.IsNullOrEmpty(caminho) && Directory.Exists(caminho))
             {
-                ListarArquivos(caminho);
-                //SalvarEstadoDoFormulario(true);
+                ListarArquivos(caminho, false, false);
+                SalvarEstadoDoFormulario(true);
             }
         }
         #endregion
@@ -420,42 +417,53 @@ namespace MyPlayer
             btnExcluirMusicasPlayList.Enabled = listView1.CheckedItems.Count > 0;
         }
 
-        private void ListarArquivos(string path)
+        private void ListarArquivos(string path, bool clearListView = false, bool addPastas = false)
         {
             const int maxFileStr = 100;
 
             InvokeAux.Access(listView1, lvw =>
             {
-                lvw.Items.Clear();
+                lvw.BeginUpdate();
+                if (clearListView) lvw.Items.Clear();
 
                 // Configuração inicial do ListView
                 lvw.View = View.Details;
                 lvw.SmallImageList = imageList1;
-                lvw.Columns.Clear();
-                lvw.Columns.Add("Nome", 150);
-                lvw.Columns.Add("Tamanho (KB)", 100);
-                lvw.Columns.Add("Data de Modificação", 150);
+                if (lvw.Columns.Count <= 0) {
+                    lvw.Columns.Clear();
+                    lvw.Columns.Add("Nome", 150);
+                    lvw.Columns.Add("Tamanho (KB)", 100);
+                    lvw.Columns.Add("Data de Modificação", 150);
+                }
+
+                var caminhosExistentes = new HashSet<string>(
+                    lvw.Items.Cast<ListViewItem>()
+                             .Select(i => i.Tag?.ToString() ?? ""),
+                    StringComparer.OrdinalIgnoreCase
+                );
 
                 try
                 {
                     // Pastas
-                    string[] pastas = Directory.GetDirectories(path);
-                    foreach (string pasta in pastas)
-                    {
-                        DirectoryInfo di = new(pasta);
-                        string nome = di.Name;
-
-                        if (nome.Length > maxFileStr)
-                            nome = nome.Substring(0, maxFileStr) + "...";
-
-                        ListViewItem item = new(nome)
+                    if (addPastas) {
+                        string[] pastas = Directory.GetDirectories(path);
+                        foreach (string pasta in pastas)
                         {
-                            ImageIndex = 0, // folder fechado
-                            Tag = di.FullName
-                        };
-                        item.SubItems.Add(""); // tamanho vazio para pastas
-                        item.SubItems.Add(di.LastWriteTime.ToString());
-                        lvw.Items.Add(item);
+                            DirectoryInfo di = new(pasta);
+                            string nome = di.Name;
+
+                            if (nome.Length > maxFileStr)
+                                nome = string.Concat(nome.AsSpan(0, maxFileStr), "...");
+
+                            ListViewItem item = new(nome)
+                            {
+                                ImageIndex = 0, // folder fechado
+                                Tag = di.FullName
+                            };
+                            item.SubItems.Add(""); // tamanho vazio para pastas
+                            item.SubItems.Add(di.LastWriteTime.ToString());
+                            lvw.Items.Add(item);
+                        }
                     }
 
                     // Arquivos — filtra apenas extensões permitidas
@@ -471,9 +479,14 @@ namespace MyPlayer
                         FileInfo fi = new(arquivo);
                         string nome = fi.Name;
                         string nomeSemExtensao = Path.GetFileNameWithoutExtension(nome);
+                        string caminhoCompleto = fi.FullName;
+                        // Verifica se já existe um item com esse caminho na Tag
+                        //bool jaExiste = lvw.Items.Cast<ListViewItem>().Any(i => i.Tag?.ToString() == caminhoCompleto);
+                        //if (jaExiste) continue;
+                        if (caminhosExistentes.Contains(caminhoCompleto)) { continue; }
 
                         if (nomeSemExtensao.Length > maxFileStr)
-                            nomeSemExtensao = nomeSemExtensao.Substring(0, maxFileStr) + "...";
+                            nomeSemExtensao = string.Concat(nomeSemExtensao.AsSpan(0, maxFileStr), "...");
 
                         ListViewItem item = new(nomeSemExtensao)
                         {
@@ -496,6 +509,8 @@ namespace MyPlayer
                 _estadoAtual.Musicas = GetListMusicas();
                 _estadoAtual.IndiceMusica = 0;
                 _filtrarMusicas.SetEstado(_estadoAtual);
+
+                lvw.EndUpdate();
             });
         }
 
@@ -553,6 +568,26 @@ namespace MyPlayer
         #region botoes
 
         #region playlist
+
+        private void btnClearPlayList_Click(object sender, EventArgs e)
+        {
+            if (listView1.Items.Count <= 0) { return; }
+            DialogResult dr = MessageBox.Show("Deseja limpar a playlist ?", "Limpar playlist", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (dr != DialogResult.Yes) { return; }
+
+            stop();
+
+            InvokeAux.Access(listView1, lvw =>
+            {
+                lvw.BeginUpdate();
+                lvw.Items.Clear();
+                lvw.EndUpdate();
+                _estadoAtual.Musicas.Clear();
+                _estadoAtual.Musicas = new();
+            });
+            SalvarEstadoDoFormulario(true);
+        }
+
         private void btnExcluirMusicasPlayList_Click(object sender, EventArgs e)
         {
             stop();
@@ -568,34 +603,35 @@ namespace MyPlayer
 
             DialogResult dr = MessageBox.Show(mensagem, "Confirmar Exclusão", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
-            if (dr == DialogResult.Yes)
+            if (dr != DialogResult.Yes) { return; }
+
+            listView1.BeginUpdate();
+
+            // Coletamos as tags (caminhos) das músicas marcadas para remover do estado
+            var caminhosParaRemover = listView1.CheckedItems
+                .Cast<ListViewItem>()
+                .Select(x => x.Tag.ToString())
+                .ToList();
+
+            // 1. Remove da tela
+            foreach (ListViewItem item in listView1.CheckedItems.Cast<ListViewItem>().ToList())
             {
-                listView1.BeginUpdate();
-
-                // Coletamos as tags (caminhos) das músicas marcadas para remover do estado
-                var caminhosParaRemover = listView1.CheckedItems
-                    .Cast<ListViewItem>()
-                    .Select(x => x.Tag.ToString())
-                    .ToList();
-
-                // 1. Remove da tela
-                foreach (ListViewItem item in listView1.CheckedItems.Cast<ListViewItem>().ToList())
-                {
-                    listView1.Items.Remove(item);
-                }
-
-                // 2. Remove do objeto de estado (o que vai para o JSON)
-                _estadoAtual.Musicas.RemoveAll(m => caminhosParaRemover.Contains(m.Tag));
-
-                listView1.EndUpdate();
-
-                // 3. Salva o estado atualizado no arquivo
-                //SalvarEstadoGlobal();
+                listView1.Items.Remove(item);
             }
+
+            // 2. Remove do objeto de estado (o que vai para o JSON)
+            _estadoAtual.Musicas.RemoveAll(m => caminhosParaRemover.Contains(m.Tag));
+
+            listView1.EndUpdate();
+
+            // 3. Salva o estado atualizado no arquivo
+            SalvarEstadoDoFormulario(true);
         }
 
         private void btnSalvarMusicasPlayList_Click(object sender, EventArgs e)
         {
+            AtualizarInterfaceListView();
+
             // 1. Validação básica
             if (listView1.Items.Count == 0)
             {
@@ -629,6 +665,7 @@ namespace MyPlayer
 
         private void btnCarregarMusicasPlayList_Click(object sender, EventArgs e)
         {
+            
             // 1. Configura o diálogo de abertura
             using (OpenFileDialog ofd = new())
             {
@@ -636,46 +673,55 @@ namespace MyPlayer
                 ofd.Filter = "Playlist JSON|*.json";
                 ofd.Title = "Selecionar Playlist";
 
-                if (ofd.ShowDialog() == DialogResult.OK)
+                if (ofd.ShowDialog() != DialogResult.OK) { return; }
+
+                try
                 {
-                    try
+                    // 2. Carrega os dados do arquivo para uma lista temporária de DTOs
+                    List<MusicaDTO> musicasCarregadas = PlayList.Carregar(ofd.FileName);
+
+                    if (musicasCarregadas == null || musicasCarregadas.Count == 0)
                     {
-                        // 2. Carrega os dados do arquivo para uma lista temporária de DTOs
-                        List<MusicaDTO> musicasCarregadas = PlayList.Carregar(ofd.FileName);
-
-                        if (musicasCarregadas == null || musicasCarregadas.Count == 0)
-                        {
-                            MessageBox.Show("A playlist selecionada está vazia ou é inválida.", "Aviso");
-                            return;
-                        }
-
-                        // 3. Atualiza o estado atual do programa
-                        _estadoAtual.Musicas = musicasCarregadas;
-                        _estadoAtual.IndiceMusica = 0; // Reinicia o índice para a primeira música
-
-                        // 4. Atualiza a interface visual (ListView)
-                        AtualizarInterfaceListView();
-
-                        //MessageBox.Show($"{musicasCarregadas.Count} músicas carregadas com sucesso!", "MyPlayer");
+                        MessageBox.Show("A playlist selecionada está vazia ou é inválida.", "Aviso");
+                        return;
                     }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Erro ao carregar playlist: {ex.Message}", "Erro");
-                    }
+
+                    stop();
+
+                    // 3. Atualiza o estado atual do programa
+                    _estadoAtual.Musicas = musicasCarregadas;
+                    _filtrarMusicas.SetEstado(_estadoAtual);
+                    _estadoAtual.IndiceMusica = 0; // Reinicia o índice para a primeira música
+
+                    // 4. Atualiza a interface visual (ListView)
+                    AtualizarInterfaceListView();
+
+                    //MessageBox.Show($"{musicasCarregadas.Count} músicas carregadas com sucesso!", "MyPlayer");
+
+                    SalvarEstadoDoFormulario(true);
                 }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Erro ao carregar playlist: {ex.Message}", "Erro");
+                }
+                
             }
         }
 
         // Método auxiliar para centralizar a lógica de preenchimento da tela
         private void AtualizarInterfaceListView()
         {
+            InvokeAux.Access(txtFiltro, txt => txt.Text = string.Empty);
+            _filtrarMusicas.ResetMemory();
+
             InvokeAux.Access(listView1, lvw =>
             {
-                lvw.BeginUpdate();
                 try
                 {
-                    lvw.Items.Clear();
-                    lvw.CheckBoxes = true; // Garante que os checkboxes apareçam
+                    lvw.BeginUpdate();
+                    lvw.Items.Clear(); // Isso DEVE funcionar se o lvw for o controle correto
+
+                    if (_estadoAtual.Musicas == null) return;
 
                     foreach (var mDto in _estadoAtual.Musicas)
                     {
@@ -683,14 +729,14 @@ namespace MyPlayer
                         {
                             Tag = mDto.Tag,
                             ImageIndex = mDto.ImageIndex,
-                            Checked = false // Você pode salvar o estado do check no DTO se desejar
+                            Checked = false
                         };
 
-                        // Adiciona subitens (Tamanho, Data) pulando o índice 0 se necessário
-                        if (mDto.SubItems != null && mDto.SubItems.Count > 1)
+                        if (mDto.SubItems != null)
                         {
-                            // Começamos do índice 1 para não repetir o nome na coluna de tamanho
-                            for (int i = 1; i < mDto.SubItems.Count; i++)
+                            // Se o seu JSON salvou o Texto principal no índice 0 dos SubItems, use i = 1
+                            // Se o seu JSON salvou APENAS as colunas extras, use i = 0
+                            for (int i = 0; i < mDto.SubItems.Count; i++)
                             {
                                 item.SubItems.Add(mDto.SubItems[i]);
                             }
@@ -702,6 +748,8 @@ namespace MyPlayer
                 finally
                 {
                     lvw.EndUpdate();
+                    // Garante o redimensionamento após carregar
+                    lvw.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
                 }
             });
         }
@@ -718,7 +766,7 @@ namespace MyPlayer
             _filtrarMusicas.SetEstado(_estadoAtual);
             _skipStopAnaliseMusica = true;
 
-            //SalvarEstadoDoFormulario(true);
+            SalvarEstadoDoFormulario(true);
 
             _skipToNext = _skipToPrevious = false;
 
@@ -757,9 +805,7 @@ namespace MyPlayer
                         lvw.Items.Add(item);
                     }
 
-                    // 3. Atualizamos a lista de estado APÓS o preenchimento, 
-                    // caso tenha havido alguma filtragem no processo.
-                    // Nota: Geralmente isso é feito fora do loop de UI para manter a lógica limpa.
+                    // 3. Atualizamos a lista de estado APÓS o preenchimento
                     _estadoAtual.Musicas = GetListMusicas();
                 }
                 finally
@@ -1105,6 +1151,7 @@ namespace MyPlayer
             }
         }
         #endregion
+
 
 
     }

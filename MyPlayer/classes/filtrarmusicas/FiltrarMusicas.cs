@@ -28,46 +28,50 @@ namespace MyPlayer.classes.filtrarmusicas
             _memory = estado.Musicas;
         }
 
+        public void ResetMemory() {
+            _memory = null;
+        }
+
         public void Filtrar(string music, ListView listView)
         {
             if (_estado == null || _estado.Musicas == null) return;
-            if (_memory == null) { _memory = _estado.Musicas; }
-            if (_memory == null) { return; }
 
-            if (_estado.Musicas.Count != _memory.Count) _estado.Musicas = _memory;
+            // Inicializa a memória na primeira vez para não perder a lista original
+            if (_memory == null) { _memory = _estado.Musicas; }
+
+            // Sempre partimos da memória (lista completa) para aplicar um novo filtro
+            List<MusicaDTO> listaParaFiltrar = _memory;
 
             // Aplica filtro se houver texto
             if (!string.IsNullOrWhiteSpace(music))
             {
                 string termo = music.Trim().ToLowerInvariant();
-                _estado.Musicas = _estado.Musicas
+                listaParaFiltrar = listaParaFiltrar
                     .Where(item =>
-                        item.Text.ToLowerInvariant().Contains(termo) ||
-                        item.SubItems.Cast<ListViewItem.ListViewSubItem>()
-                            .Any(sub => sub.Text.ToLowerInvariant().Contains(termo)))
+                        (item.Text != null && item.Text.ToLowerInvariant().Contains(termo)) ||
+                        (item.SubItems != null && item.SubItems.Any(sub => sub.ToLowerInvariant().Contains(termo))))
                     .ToList();
             }
+
+            // Atualiza o estado atual com o resultado do filtro
+            _estado.Musicas = listaParaFiltrar;
 
             // Atualiza ListView de forma thread-safe
             InvokeAux.Access(listView, lvw =>
             {
-                lvw.BeginUpdate();
                 try
                 {
+                    lvw.BeginUpdate();
                     lvw.Items.Clear();
 
-                    // Agora percorremos a lista de DTOs para criar os itens visuais
                     foreach (var mDto in _estado.Musicas)
                     {
-                        // Coluna 1: Nome (Texto principal)
                         ListViewItem item = new ListViewItem(mDto.Text)
                         {
                             Tag = mDto.Tag,
                             ImageIndex = mDto.ImageIndex
                         };
 
-                        // Adiciona os demais SubItems (Tamanho, Data, etc.)
-                        // Como mDto.SubItems é uma List<string>, adicionamos direto
                         if (mDto.SubItems != null)
                         {
                             foreach (var subText in mDto.SubItems)

@@ -1,6 +1,6 @@
 <Solution>
   <Folder Name="/Itens de Solução/">
-    <File Path="README.md" />
+    <File Path="../README.md" />
   </Folder>
   <Project Path="MyPlayer.csproj" />
 </Solution>
