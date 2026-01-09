@@ -29,5 +29,15 @@ namespace MyPlayer.classes.util
             while (condition())
                 await Task.Delay(checkIntervalMs);
         }
+
+        public static string MusicPath
+        {
+            get
+            {
+                string musicPath = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
+                return musicPath.EndsWith(@"\") ? musicPath : musicPath + @"\";
+            }
+        }
+
     }
 }

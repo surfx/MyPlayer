@@ -68,17 +68,14 @@ namespace MyPlayer
 
             _skipToNext = _skipToPrevious = false;
 
-            if (CarregarEstadoDoFormulario())
-            {
-                playMusic();
-                return;
-            }
-
-            string musicPath = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
-            musicPath = musicPath.EndsWith(@"\") ? musicPath : musicPath + @"\";
+            string musicPath = Util.MusicPath;
             InvokeAux.Access(txtPathMusicas, txt => txt.Text = musicPath);
             TreeViewUtil.PreencherTreeView(treeView1, musicPath);
-            ListarArquivos(musicPath, false);
+
+            if (!CarregarEstadoDoFormulario()) {
+                ListarArquivos(musicPath, false);
+            }
+            
             playMusic();
         }
 
@@ -118,7 +115,7 @@ namespace MyPlayer
 
         private void frmMyPlayer_FormClosing(object sender, FormClosingEventArgs e)
         {
-            //SalvarEstadoDoFormulario(true);
+            SalvarEstadoDoFormulario(true);
             GlobalKeyboardHook.Unhook();
         }
 
@@ -156,7 +153,7 @@ namespace MyPlayer
             _estadoAtual.ListVewStateProp ??= new()
                 {
                     View = (int)View.Details,
-                    ColumnWidths = [150, 100, 150]
+                    ColumnWidths = [100, 100, 150]
                 };
 
             InvokeAux.Access(listView1, lvw =>
@@ -183,8 +180,7 @@ namespace MyPlayer
                         ImageIndex = sItem.ImageIndex
                         //Checked = sItem.Checked
                     };
-                    // Pula o primeiro subitem (índice 0) para não duplicar o nome na coluna de tamanho
-                    foreach (var subText in sItem.SubItems)
+                    foreach (var subText in sItem.SubItems.Skip(1))
                     {
                         item.SubItems.Add(subText);
                     }
@@ -192,22 +188,6 @@ namespace MyPlayer
                     lvw.Items.Add(item);
                 }
 
-
-                // No construtor ou Load do Form, assine o evento
-                listView1.ColumnClick += (s, e) =>
-                {
-                    if (e.Column == 0) // Se clicou na coluna "Nome"
-                    {
-                        bool todosMarcados = listView1.CheckedItems.Count == listView1.Items.Count;
-
-                        listView1.BeginUpdate();
-                        foreach (ListViewItem item in listView1.Items)
-                        {
-                            item.Checked = !todosMarcados; // Inverte a seleção de todos
-                        }
-                        listView1.EndUpdate();
-                    }
-                };
 
                 lvw.EndUpdate();
             });
@@ -355,6 +335,7 @@ namespace MyPlayer
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
             string? caminho = e?.Node?.Tag as string;
+            treeView1.SelectedNode = null;
 
             if (!string.IsNullOrEmpty(caminho) && Directory.Exists(caminho))
             {
@@ -421,96 +402,86 @@ namespace MyPlayer
         {
             const int maxFileStr = 100;
 
-            InvokeAux.Access(listView1, lvw =>
-            {
+            InvokeAux.Access(listView1, lvw => { 
                 lvw.BeginUpdate();
+
                 if (clearListView) lvw.Items.Clear();
 
-                // Configuração inicial do ListView
                 lvw.View = View.Details;
                 lvw.SmallImageList = imageList1;
-                if (lvw.Columns.Count <= 0) {
+                if (lvw.Columns.Count <= 0)
+                {
                     lvw.Columns.Clear();
-                    lvw.Columns.Add("Nome", 150);
-                    lvw.Columns.Add("Tamanho (KB)", 100);
+                    lvw.Columns.Add("Nome", 300);
+                    lvw.Columns.Add("Tamanho", 100, HorizontalAlignment.Right);
                     lvw.Columns.Add("Data de Modificação", 150);
                 }
-
+            
                 var caminhosExistentes = new HashSet<string>(
                     lvw.Items.Cast<ListViewItem>()
                              .Select(i => i.Tag?.ToString() ?? ""),
                     StringComparer.OrdinalIgnoreCase
                 );
 
-                try
+                // Pastas
+                //if (addPastas)
+                //{
+                //    string[] pastas = Directory.GetDirectories(path);
+                //    foreach (string pasta in pastas)
+                //    {
+                //        DirectoryInfo di = new(pasta);
+                //        string nome = di.Name;
+
+                //        if (nome.Length > maxFileStr)
+                //            nome = string.Concat(nome.AsSpan(0, maxFileStr), "...");
+
+                //        ListViewItem item = new(nome)
+                //        {
+                //            ImageIndex = 0, // folder fechado
+                //            Tag = di.FullName
+                //        };
+                //        item.SubItems.Add(""); // tamanho vazio para pastas
+                //        item.SubItems.Add(di.LastWriteTime.ToString());
+                //        lvw.Items.Add(item);
+                //    }
+                //}
+
+                string[] arquivos = Directory.GetFiles(path);
+                foreach (string arquivo in arquivos
+                    .Where(arq => ExtensoesPermitidas.Contains(Path.GetExtension(arq).ToLowerInvariant()))
+                    .Where(arq => !caminhosExistentes.Contains(arq))
+                )
                 {
-                    // Pastas
-                    if (addPastas) {
-                        string[] pastas = Directory.GetDirectories(path);
-                        foreach (string pasta in pastas)
-                        {
-                            DirectoryInfo di = new(pasta);
-                            string nome = di.Name;
 
-                            if (nome.Length > maxFileStr)
-                                nome = string.Concat(nome.AsSpan(0, maxFileStr), "...");
+                    FileInfo fi = new(arquivo);
+                    string nome = fi.Name;
+                    string nomeSemExtensao = Path.GetFileNameWithoutExtension(nome);
+                    string caminhoCompleto = fi.FullName;
 
-                            ListViewItem item = new(nome)
-                            {
-                                ImageIndex = 0, // folder fechado
-                                Tag = di.FullName
-                            };
-                            item.SubItems.Add(""); // tamanho vazio para pastas
-                            item.SubItems.Add(di.LastWriteTime.ToString());
-                            lvw.Items.Add(item);
-                        }
-                    }
+                    if (nomeSemExtensao.Length > maxFileStr)
+                        nomeSemExtensao = string.Concat(nomeSemExtensao.AsSpan(0, maxFileStr), "...");
 
-                    // Arquivos — filtra apenas extensões permitidas
-                    string[] arquivos = Directory.GetFiles(path);
-                    foreach (string arquivo in arquivos)
+                    ListViewItem item = new(nomeSemExtensao)
                     {
-                        string extensao = Path.GetExtension(arquivo).ToLowerInvariant();
+                        ImageIndex = 10, // Ícone da música
+                        Tag = fi.FullName
+                    };
+                    item.SubItems.Add((fi.Length / 1024).ToString("N0") + " KB");
+                    item.SubItems.Add(fi.LastWriteTime.ToString("dd/MM/yyyy HH:mm"));
 
-                        // só adiciona se a extensão estiver na lista permitida
-                        if (!ExtensoesPermitidas.Contains(extensao))
-                            continue;
-
-                        FileInfo fi = new(arquivo);
-                        string nome = fi.Name;
-                        string nomeSemExtensao = Path.GetFileNameWithoutExtension(nome);
-                        string caminhoCompleto = fi.FullName;
-                        // Verifica se já existe um item com esse caminho na Tag
-                        //bool jaExiste = lvw.Items.Cast<ListViewItem>().Any(i => i.Tag?.ToString() == caminhoCompleto);
-                        //if (jaExiste) continue;
-                        if (caminhosExistentes.Contains(caminhoCompleto)) { continue; }
-
-                        if (nomeSemExtensao.Length > maxFileStr)
-                            nomeSemExtensao = string.Concat(nomeSemExtensao.AsSpan(0, maxFileStr), "...");
-
-                        ListViewItem item = new(nomeSemExtensao)
-                        {
-                            ImageIndex = 10, // ícone de arquivo mp3
-                            Tag = fi.FullName
-                        };
-                        item.SubItems.Add((fi.Length / 1024).ToString());
-                        item.SubItems.Add(fi.LastWriteTime.ToString());
-                        lvw.Items.Add(item);
-                    }
+                    lvw.Items.Add(item);
                 }
-                catch (UnauthorizedAccessException)
-                {
-                    MessageBox.Show("Sem permissão para acessar alguns arquivos nesta pasta.");
-                }
+
 
                 lvw.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
+                //lvw.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+
+                lvw.EndUpdate();
 
                 // atualiza a lista de musicas
                 _estadoAtual.Musicas = GetListMusicas();
                 _estadoAtual.IndiceMusica = 0;
                 _filtrarMusicas.SetEstado(_estadoAtual);
-
-                lvw.EndUpdate();
             });
         }
 
@@ -519,29 +490,27 @@ namespace MyPlayer
         {
             return InvokeAux.GetValue(listView1, lv =>
             {
-                List<MusicaDTO> rt = new List<MusicaDTO>();
+                List<MusicaDTO> rt = [];
 
-                foreach (ListViewItem item in lv.Items)
+                var itensValidos = lv.Items.Cast<ListViewItem>()
+                    .Where(item => {
+                        string? path = item.Tag?.ToString();
+                        return !string.IsNullOrEmpty(path) &&
+                               File.Exists(path) &&
+                               ExtensoesPermitidas.Contains(Path.GetExtension(path).ToLowerInvariant());
+                    });
+
+                foreach (ListViewItem item in itensValidos)
                 {
-                    if (item.Tag == null) continue;
-
-                    string? path = item.Tag.ToString();
-                    if (string.IsNullOrEmpty(path) || !File.Exists(path)) continue;
-
-                    string ext = Path.GetExtension(path).ToLowerInvariant();
-                    if (!ExtensoesPermitidas.Contains(ext)) continue;
-
-                    // Criamos o DTO com os dados extraídos do item da ListView
                     var musicaDto = new MusicaDTO
                     {
                         Text = item.Text,
                         ImageIndex = item.ImageIndex,
-                        Tag = path,
-                        SubItems = new List<string>()
+                        Tag = item?.Tag?.ToString() ?? "",
+                        SubItems = []
                     };
 
-                    // Adicionamos todos os subitens como strings
-                    foreach (ListViewItem.ListViewSubItem sub in item.SubItems)
+                    foreach (var sub in item.SubItems.Cast<ListViewItem.ListViewSubItem>().Skip(1))
                     {
                         musicaDto.SubItems.Add(sub.Text);
                     }
@@ -640,25 +609,24 @@ namespace MyPlayer
             }
 
             // 2. Diálogo para o usuário escolher o nome
-            using (SaveFileDialog sfd = new SaveFileDialog())
+            using (SaveFileDialog sfd = new())
             {
-                sfd.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                sfd.InitialDirectory = Util.MusicPath;
                 sfd.Filter = "Playlist JSON|*.json";
                 sfd.Title = "Salvar Playlist";
+                sfd.FileName = "playlist";
 
-                if (sfd.ShowDialog() == DialogResult.OK)
+                if (sfd.ShowDialog() != DialogResult.OK) { return; }
+                try
                 {
-                    try
-                    {
-                        List<MusicaDTO> dadosParaSalvar = GetListMusicas();
+                    List<MusicaDTO> dadosParaSalvar = GetListMusicas();
 
-                        // Chamamos o método estático que você criou
-                        PlayList.Salvar(sfd.FileName, dadosParaSalvar);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Erro ao salvar: {ex.Message}");
-                    }
+                    // Chamamos o método estático que você criou
+                    PlayList.Salvar(sfd.FileName, dadosParaSalvar);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Erro ao salvar: {ex.Message}");
                 }
             }
         }
@@ -669,7 +637,7 @@ namespace MyPlayer
             // 1. Configura o diálogo de abertura
             using (OpenFileDialog ofd = new())
             {
-                ofd.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                ofd.InitialDirectory = Util.MusicPath;
                 ofd.Filter = "Playlist JSON|*.json";
                 ofd.Title = "Selecionar Playlist";
 
@@ -719,13 +687,13 @@ namespace MyPlayer
                 try
                 {
                     lvw.BeginUpdate();
-                    lvw.Items.Clear(); // Isso DEVE funcionar se o lvw for o controle correto
+                    lvw.Items.Clear();
 
                     if (_estadoAtual.Musicas == null) return;
 
                     foreach (var mDto in _estadoAtual.Musicas)
                     {
-                        ListViewItem item = new ListViewItem(mDto.Text)
+                        ListViewItem item = new(mDto.Text)
                         {
                             Tag = mDto.Tag,
                             ImageIndex = mDto.ImageIndex,
@@ -734,11 +702,9 @@ namespace MyPlayer
 
                         if (mDto.SubItems != null)
                         {
-                            // Se o seu JSON salvou o Texto principal no índice 0 dos SubItems, use i = 1
-                            // Se o seu JSON salvou APENAS as colunas extras, use i = 0
-                            for (int i = 0; i < mDto.SubItems.Count; i++)
+                            foreach (var subText in mDto.SubItems)
                             {
-                                item.SubItems.Add(mDto.SubItems[i]);
+                                item.SubItems.Add(subText);
                             }
                         }
 
@@ -747,9 +713,8 @@ namespace MyPlayer
                 }
                 finally
                 {
-                    lvw.EndUpdate();
-                    // Garante o redimensionamento após carregar
                     lvw.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
+                    lvw.EndUpdate();
                 }
             });
         }
@@ -795,8 +760,7 @@ namespace MyPlayer
                         // 2. Adicionamos os subitens (Tamanho, Data, etc)
                         if (musicaDto.SubItems != null)
                         {
-                            // Se o seu DTO já tem o Nome no índice 0, use .Skip(1) para evitar duplicados
-                            foreach (var subText in musicaDto.SubItems.Skip(1))
+                            foreach (var subText in musicaDto.SubItems)
                             {
                                 item.SubItems.Add(subText);
                             }
@@ -1151,8 +1115,6 @@ namespace MyPlayer
             }
         }
         #endregion
-
-
 
     }
 }
