@@ -11,14 +11,12 @@ namespace MyPlayer.classes.controleestados
         {
             try
             {
-                // Note que agora usamos MusicaDTO diretamente na classe de serialização
                 var serializavel = new SerializableFormularioEstado
                 {
                     MusicPath = estado.MusicPath,
                     IndiceMusica = estado.IndiceMusica,
                     View = estado.ListVewStateProp.View,
                     ColumnWidths = estado.ListVewStateProp.ColumnWidths,
-                    // Se estado.Musicas já for List<MusicaDTO>, basta atribuir
                     Musicas = estado.Musicas
                 };
 
@@ -51,7 +49,6 @@ namespace MyPlayer.classes.controleestados
                         View = serializavel.View,
                         ColumnWidths = serializavel.ColumnWidths
                     },
-                    // Reutiliza a lista diretamente do JSON
                     Musicas = serializavel.Musicas
                 };
             }
@@ -62,7 +59,6 @@ namespace MyPlayer.classes.controleestados
             }
         }
 
-        // Classes auxiliares simplificadas
         private class SerializableFormularioEstado
         {
             public string MusicPath { get; set; }
@@ -71,5 +67,6 @@ namespace MyPlayer.classes.controleestados
             public List<int> ColumnWidths { get; set; }
             public List<MusicaDTO> Musicas { get; set; }
         }
+
     }
 }

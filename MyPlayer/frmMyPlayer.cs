@@ -7,6 +7,7 @@ using MyPlayer.classes.keyhook;
 using MyPlayer.classes.player;
 using MyPlayer.classes.playlist;
 using MyPlayer.classes.util;
+using MyPlayer.classes.util.form;
 using MyPlayer.classes.util.threads;
 using MyPlayer.classes.util.treeview;
 using MyPlayer.classes.waveimage;
@@ -31,7 +32,7 @@ namespace MyPlayer
         private bool _skipStopAnaliseMusica = false;
         private bool _skipPlayMusica = false;
 
-        private WaveImage _wi;
+        private WaveImage? _wi;
 
         private FiltrarMusicas _filtrarMusicas = FiltrarMusicas.Instance;
 
@@ -64,7 +65,7 @@ namespace MyPlayer
                 tckbar.TickStyle = TickStyle.None;
             });
 
-            updateContextMenuStrip();
+            new ContextMenuStripAux(ref listView1, ref contextMenuStrip1, _playerControl).UpdateContextMenuStrip();
 
             _skipToNext = _skipToPrevious = false;
 
@@ -73,9 +74,9 @@ namespace MyPlayer
             TreeViewUtil.PreencherTreeView(treeView1, musicPath);
 
             if (!CarregarEstadoDoFormulario()) {
-                ListarArquivos(musicPath, false);
+                ListViewAux.ListarArquivosListView(ref listView1, ref imageList1, ExtensoesPermitidas, ref _estadoAtual, ref _filtrarMusicas, musicPath, true, false);
             }
-            
+
             playMusic();
         }
 
@@ -102,7 +103,6 @@ namespace MyPlayer
             }
         }
 
-
         private void notifyIcon1_DoubleClick(object sender, EventArgs e)
         {
             this.Show();
@@ -123,87 +123,9 @@ namespace MyPlayer
 
         #region controle estados
         private FormularioEstado _estadoAtual = new();
-
-        private void SalvarEstadoDoFormulario(bool clearFilter = true)
-        {
-            if (clearFilter)
-            {
-                InvokeAux.Access(txtFiltro, txt => txt.Text = string.Empty);
-                _filtrarMusicas.Filtrar(string.Empty, listView1);
-            }
-
-            if (_estadoAtual.ListVewStateProp == null) { _estadoAtual.ListVewStateProp = new(); }
-            _estadoAtual.ListVewStateProp.View = (int)listView1.View;
-            _estadoAtual.ListVewStateProp.ColumnWidths = [];
-            foreach (ColumnHeader col in listView1.Columns)
-                _estadoAtual.ListVewStateProp.ColumnWidths.Add(col.Width);
-
-            ControleEstados.SalvarEstado(_estadoAtual);
-        }
-
-        private bool CarregarEstadoDoFormulario()
-        {
-            var aux = ControleEstados.RecuperarEstado();
-            if (aux == null) { return false; }
-            _estadoAtual = aux;
-            _filtrarMusicas.SetEstado(_estadoAtual);
-
-            //_indiceMusica = _estadoAtual.IndiceMusica;
-
-            _estadoAtual.ListVewStateProp ??= new()
-                {
-                    View = (int)View.Details,
-                    ColumnWidths = [100, 100, 150]
-                };
-
-            InvokeAux.Access(listView1, lvw =>
-            {
-                lvw.BeginUpdate();
-                lvw.Items.Clear();
-                lvw.View = (View)_estadoAtual.ListVewStateProp.View; // importante restaurar a View
-                lvw.SmallImageList = imageList1;
-
-                // Restaurar colunas se quiser
-                lvw.Columns.Clear();
-                lvw.CheckBoxes = true;
-                lvw.FullRowSelect = true;
-
-                lvw.Columns.Add("Nome", _estadoAtual.ListVewStateProp.ColumnWidths[0]);
-                lvw.Columns.Add("Tamanho (KB)", _estadoAtual.ListVewStateProp.ColumnWidths[1]);
-                lvw.Columns.Add("Data de Modificação", _estadoAtual.ListVewStateProp.ColumnWidths[2]);
-
-                foreach (var sItem in _estadoAtual.Musicas)
-                {
-                    ListViewItem item = new(sItem.Text)
-                    {
-                        Tag = sItem.Tag,
-                        ImageIndex = sItem.ImageIndex
-                        //Checked = sItem.Checked
-                    };
-                    foreach (var subText in sItem.SubItems.Skip(1))
-                    {
-                        item.SubItems.Add(subText);
-                    }
-
-                    lvw.Items.Add(item);
-                }
-
-
-                lvw.EndUpdate();
-            });
-
-            AtualizarSelecaoMusicaAtual();
-
-            if (!string.IsNullOrEmpty(_estadoAtual.MusicPath))
-            {
-                InvokeAux.Access(txtPathMusicas, txt => txt.Text = _estadoAtual.MusicPath);
-                TreeViewUtil.PreencherTreeView(treeView1, _estadoAtual.MusicPath);
-            }
-
-            return true;
-        }
+        private void SalvarEstadoDoFormulario(bool clearFilter = true) => EstadoFormAux.SalvarEstadoDoFormulario(ref txtFiltro, ref _filtrarMusicas, ref listView1, ref _estadoAtual, clearFilter);
+        private bool CarregarEstadoDoFormulario() => EstadoFormAux.CarregarEstadoDoFormulario(ref _estadoAtual, ref _filtrarMusicas, ref listView1, ref imageList1, AtualizarSelecaoMusicaAtual, ref txtPathMusicas, ref treeView1);
         #endregion
-
 
         #region keypress
         private void handleKeyPress(Keys keys)
@@ -225,8 +147,8 @@ namespace MyPlayer
 
         private void pictureBox1_Click(object sender, EventArgs e)
         {
-            if (_wi == null) { return; }
-            _wi.clickPictureBox(e, pictureBox1.Image);
+            if (_wi == null || pictureBox1.Image == null) { return; }
+            _wi?.clickPictureBox(e, pictureBox1.Image);
         }
 
         private void btnOpenFolderMusics_Click(object sender, EventArgs e)
@@ -251,86 +173,6 @@ namespace MyPlayer
             }
         }
 
-        #region ContextMenuStrip
-        private void updateContextMenuStrip()
-        {
-            var abrirPasta = new ToolStripMenuItem("Abrir pasta onde está o arquivo");
-            var copiarCaminho = new ToolStripMenuItem("Copiar caminho do arquivo");
-            var deletarArquivo = new ToolStripMenuItem("Deletar arquivo");
-
-            abrirPasta.Click += AbrirPasta_Click;
-            copiarCaminho.Click += CopiarCaminho_Click;
-            deletarArquivo.Click += DeletarArquivo_Click;
-
-            contextMenuStrip1.Items.AddRange(new ToolStripItem[]
-            {
-                abrirPasta,
-                copiarCaminho,
-                deletarArquivo
-            });
-
-        }
-
-        private void AbrirPasta_Click(object? sender, EventArgs e)
-        {
-            if (InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems.Count) == 0) return;
-            string? caminho = InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems[0].Tag?.ToString());
-            if (string.IsNullOrEmpty(caminho)) return;
-
-            if (File.Exists(caminho))
-            {
-                string? pasta = Path.GetDirectoryName(caminho);
-                if (pasta != null)
-                    System.Diagnostics.Process.Start("explorer.exe", pasta);
-            }
-            else if (Directory.Exists(caminho))
-            {
-                System.Diagnostics.Process.Start("explorer.exe", caminho);
-            }
-        }
-
-        private void CopiarCaminho_Click(object? sender, EventArgs e)
-        {
-            if (InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems.Count) == 0) return;
-            string? caminho = InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems[0].Tag?.ToString());
-            if (!string.IsNullOrEmpty(caminho))
-            {
-                Clipboard.SetText(caminho);
-            }
-        }
-
-        private void DeletarArquivo_Click(object? sender, EventArgs e)
-        {
-            if (InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems.Count) == 0) return;
-            string? caminho = InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems[0].Tag?.ToString());
-            if (string.IsNullOrEmpty(caminho) || !File.Exists(caminho)) return;
-
-            var nome = Path.GetFileName(caminho);
-            var result = MessageBox.Show(
-                $"Tem certeza que deseja deletar o arquivo:\n\n{nome}?",
-                "Confirmar exclusão",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning
-            );
-
-            if (result == DialogResult.Yes)
-            {
-                try
-                {
-                    _playerControl?.Stop();
-
-                    File.Delete(caminho);
-                    InvokeAux.Access(listView1, lvw => lvw.Items.Remove(listView1.SelectedItems[0]));
-                    MessageBox.Show("Arquivo deletado com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Erro ao deletar o arquivo:\n{ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-        }
-        #endregion
-
         #region treeview
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
@@ -339,7 +181,7 @@ namespace MyPlayer
 
             if (!string.IsNullOrEmpty(caminho) && Directory.Exists(caminho))
             {
-                ListarArquivos(caminho, false, false);
+                ListViewAux.ListarArquivosListView(ref listView1, ref imageList1, ExtensoesPermitidas, ref _estadoAtual, ref _filtrarMusicas, caminho, false, false);
                 SalvarEstadoDoFormulario(true);
             }
         }
@@ -365,18 +207,16 @@ namespace MyPlayer
 
         private void listView1_MouseDown(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Right)
+            if (e.Button != MouseButtons.Right) { return; }
+            var info = InvokeAux.GetValue(listView1, lvw => lvw.HitTest(e.Location));
+            if (info.Item != null)
             {
-                var info = InvokeAux.GetValue(listView1, lvw => lvw.HitTest(e.Location));
-                if (info.Item != null)
-                {
-                    info.Item.Selected = true;
-                }
-                else
-                {
-                    // se clicar em área vazia
-                    InvokeAux.Access(listView1, lvw => lvw.SelectedItems.Clear());
-                }
+                info.Item.Selected = true;
+            }
+            else
+            {
+                // se clicar em área vazia
+                InvokeAux.Access(listView1, lvw => lvw.SelectedItems.Clear());
             }
         }
 
@@ -398,141 +238,7 @@ namespace MyPlayer
             btnExcluirMusicasPlayList.Enabled = listView1.CheckedItems.Count > 0;
         }
 
-        private void ListarArquivos(string path, bool clearListView = false, bool addPastas = false)
-        {
-            const int maxFileStr = 100;
-
-            InvokeAux.Access(listView1, lvw => { 
-                lvw.BeginUpdate();
-
-                if (clearListView) lvw.Items.Clear();
-
-                lvw.View = View.Details;
-                lvw.SmallImageList = imageList1;
-                if (lvw.Columns.Count <= 0)
-                {
-                    lvw.Columns.Clear();
-                    lvw.Columns.Add("Nome", 300);
-                    lvw.Columns.Add("Tamanho", 100, HorizontalAlignment.Right);
-                    lvw.Columns.Add("Data de Modificação", 150);
-                }
-            
-                var caminhosExistentes = new HashSet<string>(
-                    lvw.Items.Cast<ListViewItem>()
-                             .Select(i => i.Tag?.ToString() ?? ""),
-                    StringComparer.OrdinalIgnoreCase
-                );
-
-                // Pastas
-                //if (addPastas)
-                //{
-                //    string[] pastas = Directory.GetDirectories(path);
-                //    foreach (string pasta in pastas)
-                //    {
-                //        DirectoryInfo di = new(pasta);
-                //        string nome = di.Name;
-
-                //        if (nome.Length > maxFileStr)
-                //            nome = string.Concat(nome.AsSpan(0, maxFileStr), "...");
-
-                //        ListViewItem item = new(nome)
-                //        {
-                //            ImageIndex = 0, // folder fechado
-                //            Tag = di.FullName
-                //        };
-                //        item.SubItems.Add(""); // tamanho vazio para pastas
-                //        item.SubItems.Add(di.LastWriteTime.ToString());
-                //        lvw.Items.Add(item);
-                //    }
-                //}
-
-                string[] arquivos = Directory.GetFiles(path);
-                foreach (string arquivo in arquivos
-                    .Where(arq => ExtensoesPermitidas.Contains(Path.GetExtension(arq).ToLowerInvariant()))
-                    .Where(arq => !caminhosExistentes.Contains(arq))
-                )
-                {
-
-                    FileInfo fi = new(arquivo);
-                    string nome = fi.Name;
-                    string nomeSemExtensao = Path.GetFileNameWithoutExtension(nome);
-                    string caminhoCompleto = fi.FullName;
-
-                    if (nomeSemExtensao.Length > maxFileStr)
-                        nomeSemExtensao = string.Concat(nomeSemExtensao.AsSpan(0, maxFileStr), "...");
-
-                    ListViewItem item = new(nomeSemExtensao)
-                    {
-                        ImageIndex = 10, // Ícone da música
-                        Tag = fi.FullName
-                    };
-                    item.SubItems.Add((fi.Length / 1024).ToString("N0") + " KB");
-                    item.SubItems.Add(fi.LastWriteTime.ToString("dd/MM/yyyy HH:mm"));
-
-                    lvw.Items.Add(item);
-                }
-
-
-                lvw.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
-                //lvw.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
-
-                lvw.EndUpdate();
-
-                // atualiza a lista de musicas
-                _estadoAtual.Musicas = GetListMusicas();
-                _estadoAtual.IndiceMusica = 0;
-                _filtrarMusicas.SetEstado(_estadoAtual);
-            });
-        }
-
-        // Retorna as músicas como ListViewItem (usado em UI)
-        private List<MusicaDTO> GetListMusicas()
-        {
-            return InvokeAux.GetValue(listView1, lv =>
-            {
-                List<MusicaDTO> rt = [];
-
-                var itensValidos = lv.Items.Cast<ListViewItem>()
-                    .Where(item => {
-                        string? path = item.Tag?.ToString();
-                        return !string.IsNullOrEmpty(path) &&
-                               File.Exists(path) &&
-                               ExtensoesPermitidas.Contains(Path.GetExtension(path).ToLowerInvariant());
-                    });
-
-                foreach (ListViewItem item in itensValidos)
-                {
-                    var musicaDto = new MusicaDTO
-                    {
-                        Text = item.Text,
-                        ImageIndex = item.ImageIndex,
-                        Tag = item?.Tag?.ToString() ?? "",
-                        SubItems = []
-                    };
-
-                    foreach (var sub in item.SubItems.Cast<ListViewItem.ListViewSubItem>().Skip(1))
-                    {
-                        musicaDto.SubItems.Add(sub.Text);
-                    }
-
-                    rt.Add(musicaDto);
-                }
-                return rt;
-            });
-        }
-
-        // 🔁 Sobrecarga — retorna apenas os caminhos (List<string>)
-        private List<string> GetListMusicasPaths()
-        {
-            _estadoAtual.Musicas ??= GetListMusicas();
-            return (_estadoAtual.Musicas ?? [])
-                .Select(i => i.Tag?.ToString())
-                .Where(p => !string.IsNullOrEmpty(p))
-                .ToList()!;
-        }
-
         #endregion
-
 
         #region botoes
 
@@ -619,7 +325,7 @@ namespace MyPlayer
                 if (sfd.ShowDialog() != DialogResult.OK) { return; }
                 try
                 {
-                    List<MusicaDTO> dadosParaSalvar = GetListMusicas();
+                    List<MusicaDTO> dadosParaSalvar = ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
 
                     // Chamamos o método estático que você criou
                     PlayList.Salvar(sfd.FileName, dadosParaSalvar);
@@ -722,7 +428,7 @@ namespace MyPlayer
 
         private void btnRandomizar_Click(object sender, EventArgs e)
         {
-            _estadoAtual.Musicas ??= GetListMusicas();
+            _estadoAtual.Musicas ??= ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
             if (_estadoAtual.Musicas == null || _estadoAtual.Musicas.Count == 0) { return; }
 
             // Embaralha usando seu método Fisher–Yates
@@ -748,7 +454,7 @@ namespace MyPlayer
                 {
                     lvw.Items.Clear();
 
-                    // 1. Transformamos cada DTO em um ListViewItem real
+                    // 1. Transformar DTO em um ListViewItem
                     foreach (var musicaDto in _estadoAtual.Musicas)
                     {
                         ListViewItem item = new ListViewItem(musicaDto.Text)
@@ -757,7 +463,7 @@ namespace MyPlayer
                             ImageIndex = musicaDto.ImageIndex
                         };
 
-                        // 2. Adicionamos os subitens (Tamanho, Data, etc)
+                        // 2. subitens (Tamanho, Data, etc)
                         if (musicaDto.SubItems != null)
                         {
                             foreach (var subText in musicaDto.SubItems)
@@ -769,8 +475,8 @@ namespace MyPlayer
                         lvw.Items.Add(item);
                     }
 
-                    // 3. Atualizamos a lista de estado APÓS o preenchimento
-                    _estadoAtual.Musicas = GetListMusicas();
+                    // 3. Atualizamos a lista de estado
+                    _estadoAtual.Musicas = ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
                 }
                 finally
                 {
@@ -785,20 +491,9 @@ namespace MyPlayer
             }
         }
 
-        private void btnVoltar_Click(object sender, EventArgs e)
-        {
-            previousMusic();
-        }
-
-        private void btnPlayPause_Click(object sender, EventArgs e)
-        {
-            playPause();
-        }
-
-        private void btnProximo_Click(object sender, EventArgs e)
-        {
-            nextMusic();
-        }
+        private void btnVoltar_Click(object sender, EventArgs e) => previousMusic();
+        private void btnPlayPause_Click(object sender, EventArgs e) => playPause();
+        private void btnProximo_Click(object sender, EventArgs e) => nextMusic();
 
         #region btn aux
         private void playPause()
@@ -905,7 +600,7 @@ namespace MyPlayer
         {
             if (_skipPlayMusica) { _skipPlayMusica = false; return; }
 
-            _estadoAtual.Musicas ??= GetListMusicas();
+            _estadoAtual.Musicas ??= ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
             if (_estadoAtual.Musicas == null || _estadoAtual.Musicas.Count == 0) return;
 
             if (_estadoAtual.IndiceMusica < 0) _estadoAtual.IndiceMusica = _estadoAtual.Musicas.Count - 1;
@@ -929,7 +624,7 @@ namespace MyPlayer
             {
                 _wi = new(_playerControl.AudioFileReaderProp, this, width: pictureBox1.Width);
 
-                _wi.init(image =>
+                _wi?.init(image =>
                 {
                     if (image == null) { return; }
                     pictureBox1.Image = image;
@@ -1048,7 +743,7 @@ namespace MyPlayer
             //musicTime($"{TimeSpan.FromMilliseconds(ms).ToString(@"hh\:mm\:ss")} - {TimeSpan.FromMilliseconds(maxMs).ToString(@"hh\:mm\:ss")}");
 
             #region pictureBox1
-            Image? image = _wi.getUpdateImage();
+            Image? image = _wi?.getUpdateImage();
             if (image == null) { return; }
 
             InvokeAux.Access(pictureBox1, pct => pct.Image = image);
@@ -1066,7 +761,7 @@ namespace MyPlayer
         {
             if (_skipStopAnaliseMusica) { _skipStopAnaliseMusica = false; return; }
             if (listViewDblClick) { listViewDblClick = false; return; }
-            _estadoAtual.Musicas ??= GetListMusicas();
+            _estadoAtual.Musicas ??= ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
             if (_estadoAtual.Musicas == null || _estadoAtual.Musicas.Count == 0) return;
 
             bool avancar = (_skipToNext && !_skipToPrevious) || (!_skipToNext && !_skipToPrevious);
