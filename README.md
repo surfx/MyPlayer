@@ -17,7 +17,7 @@ Neste projeto - estudo de:
 1 - lib NAudio
 2 - controle de estados de um player: início, pause, continue, scroll music
 
-A "onda" que representa a execução das músicas está na classe `MyPlayer.classes.waveimage.WaveImage`. Infelizmente perdi a referência original do código que cria a "onda".
+A "onda" que representa a execução das músicas está na classe `MyPlayer.classes.waveimage.WaveImage`, ver [NAudio.WaveFormRenderer](https://github.com/naudio/NAudio.WaveFormRenderer/tree/master).
 
 # Libs
 
@@ -28,12 +28,13 @@ A "onda" que representa a execução das músicas está na classe `MyPlayer.clas
 - [X] controle de estados simples
 - [ ] filtros
 - [ ] estado treeview
-- [ ] permitir adicionar várias pastas
-- [ ] salvar / abrir playlist ?
-- [ ] botões para primeira e última m�sica ?
+- [X] permitir adicionar várias pastas
+- [X] salvar / abrir playlist
+- [ ] botões para primeira e última música ?
 - [ ] dark theme ?
 
 # Urls
 
 - [Fisher–Yates](https://en-wikipedia-org.translate.goog/wiki/Fisher%E2%80%93Yates_shuffle?_x_tr_sl=en&_x_tr_tl=pt&_x_tr_hl=pt&_x_tr_pto=tc)
+- [NAudio.WaveFormRenderer](https://github.com/naudio/NAudio.WaveFormRenderer/tree/master)
 - [icons8](https://icons8.com/)
