@@ -14,8 +14,8 @@ Sua implementação está na classe `MyPlayer.classes.util.Util`, método `publi
 
 Neste projeto - estudo de:
 
-1 - lib NAudio
-2 - controle de estados de um player: início, pause, continue, scroll music
+1. lib NAudio
+2. controle de estados de um player: início, pause, continue, scroll music
 
 A "onda" que representa a execução das músicas está na classe `MyPlayer.classes.waveimage.WaveImage`, ver [NAudio.WaveFormRenderer](https://github.com/naudio/NAudio.WaveFormRenderer/tree/master).
 
