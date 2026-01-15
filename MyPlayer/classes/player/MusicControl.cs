@@ -27,19 +27,28 @@ namespace MyPlayer.classes.player
         public MusicControl(string musicPath)
         {
             if (string.IsNullOrEmpty(musicPath) || !File.Exists(musicPath)) { return; }
-            AudioFile = new AudioFileReader(musicPath);
-            _waveOutEvent = new WaveOutEvent();
-            if (!IsValid) { return; }
-            _waveOutEvent.Init(AudioFile);
-            //IsPlaying = IsPaused = false;
-
-            TotalTime = AudioFile.TotalTime;
-            _waveOutEvent.PlaybackStopped += (s, e) =>
+            try
             {
-                //IsPlaying = false;
-                //IsPaused = false;
-                EvtStop?.Invoke(this, e);
-            };
+                AudioFile = new AudioFileReader(musicPath);
+                _waveOutEvent = new WaveOutEvent();
+                if (!IsValid) { return; }
+                _waveOutEvent.Init(AudioFile);
+                //IsPlaying = IsPaused = false;
+
+                TotalTime = AudioFile.TotalTime;
+                _waveOutEvent.PlaybackStopped += (s, e) =>
+                {
+                    //IsPlaying = false;
+                    //IsPaused = false;
+                    EvtStop?.Invoke(this, e);
+                };
+            }
+            catch (NAudio.MmException ex)
+            {
+                Console.WriteLine($"Error initializing audio: {ex.Message}");
+                AudioFile = null;
+                _waveOutEvent = null;
+            }
         }
 
 
@@ -57,11 +66,19 @@ namespace MyPlayer.classes.player
         public void Play()
         {
             if (!IsValid) { return; }
-            _waveOutEvent!.Play();
-            //IsPlaying = true;
-            //IsPaused = false;
+            try
+            {
+                _waveOutEvent!.Play();
+                //IsPlaying = true;
+                //IsPaused = false;
 
-            EvtPlaying?.Invoke(this, EventArgs.Empty);
+                EvtPlaying?.Invoke(this, EventArgs.Empty);
+            }
+            catch (NAudio.MmException ex)
+            {
+                Console.WriteLine($"Error playing: {ex.Message}");
+                Stop();
+            }
         }
 
         public void Pause()
@@ -77,11 +94,19 @@ namespace MyPlayer.classes.player
         public void Resume()
         {
             if (!IsValid || !IsPaused) { return; }
-            _waveOutEvent!.Play();
-            //IsPaused = false;
-            //IsPlaying = true;
+            try
+            {
+                _waveOutEvent!.Play();
+                //IsPaused = false;
+                //IsPlaying = true;
 
-            EvtResume?.Invoke(this, EventArgs.Empty);
+                EvtResume?.Invoke(this, EventArgs.Empty);
+            }
+            catch (NAudio.MmException ex)
+            {
+                Console.WriteLine($"Error resuming: {ex.Message}");
+                Stop();
+            }
         }
 
         public void Stop()

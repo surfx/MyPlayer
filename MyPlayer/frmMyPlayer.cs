@@ -509,17 +509,20 @@ namespace MyPlayer
             {
                 playMusic();
             }
-            else if (_playerControl != null)
+            else
             {
                 if (_playerControl.IsPlaying)
                 {
                     _playerControl.Pause();
                 }
-                else
+                else if (_playerControl.IsPaused)
                 {
                     _playerControl.Resume();
                 }
-
+                else // Stopped
+                {
+                    playMusic();
+                }
             }
 
             //Console.WriteLine($"_playerControl.IsPlaying: {_playerControl?.IsPlaying}, PlaybackStateProp: {_playerControl?.PlaybackStateProp}");
