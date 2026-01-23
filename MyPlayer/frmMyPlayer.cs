@@ -28,7 +28,7 @@ namespace MyPlayer
         private bool _skipToPrevious = false;
         private PlayerControl? _playerControl;
         private bool listViewDblClick = false;
-        private const bool PermitirSystray = false;
+        private static readonly bool PermitirSystray = false;
         private bool _skipStopAnaliseMusica = false;
         private bool _skipPlayMusica = false;
 
@@ -285,7 +285,7 @@ namespace MyPlayer
             // Coletamos as tags (caminhos) das músicas marcadas para remover do estado
             var caminhosParaRemover = listView1.CheckedItems
                 .Cast<ListViewItem>()
-                .Select(x => x.Tag.ToString())
+                .Select(x => x.Tag?.ToString())
                 .ToList();
 
             // 1. Remove da tela
@@ -295,7 +295,10 @@ namespace MyPlayer
             }
 
             // 2. Remove do objeto de estado (o que vai para o JSON)
-            _estadoAtual.Musicas.RemoveAll(m => caminhosParaRemover.Contains(m.Tag));
+            if (_estadoAtual.Musicas != null)
+            {
+                _estadoAtual.Musicas.RemoveAll(m => caminhosParaRemover.Contains(m.Tag));
+            }
 
             listView1.EndUpdate();
 

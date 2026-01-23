@@ -61,11 +61,11 @@ namespace MyPlayer.classes.controleestados
 
         private class SerializableFormularioEstado
         {
-            public string MusicPath { get; set; }
+            public string MusicPath { get; set; } = string.Empty;
             public int IndiceMusica { get; set; }
             public int View { get; set; }
-            public List<int> ColumnWidths { get; set; }
-            public List<MusicaDTO> Musicas { get; set; }
+            public List<int> ColumnWidths { get; set; } = new();
+            public List<MusicaDTO> Musicas { get; set; } = new();
         }
 
     }

@@ -116,7 +116,7 @@ namespace MyPlayer.classes.player
 
             if (!IsValid) { return; }
             if (_waveOutEvent != null) _waveOutEvent.Stop();
-            try { if (AudioFile != null && AudioFile.Position != null) AudioFile.Position = 0; } catch (Exception) { }
+            try { if (AudioFile != null) AudioFile.Position = 0; } catch (Exception) { }
 
             EvtStop?.Invoke(this, EventArgs.Empty);
         }

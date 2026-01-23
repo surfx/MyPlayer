@@ -1,5 +1,7 @@
 ﻿using NAudio.Wave;
 using NAudio.WaveFormRenderer;
+using System.Drawing;
+using System.Drawing.Drawing2D;
 
 namespace MyPlayer.classes.waveimage
 {
@@ -9,13 +11,20 @@ namespace MyPlayer.classes.waveimage
     internal class WaveImage : IDisposable
     {
 
-        private WaveFormRenderer waveFormRenderer;
+        private WaveFormRenderer? waveFormRenderer;
         private Image? image;
-        private AudioFileReader audioFile;
+        private AudioFileReader? audioFile;
         private readonly Form frm;
 
-        private readonly Color cor1 = Color.BlueViolet; //Color.DarkGreen
-        private readonly Color cor2 = Color.RebeccaPurple; //Color.Green
+        // --primary-color: #0ea5e9 (14, 165, 233)
+        private readonly Color primaryColor = Color.FromArgb(14, 165, 233);
+        // --secondary-color: #22c55e (34, 197, 94)
+        private readonly Color secondaryColor = Color.FromArgb(34, 197, 94);
+
+        // --primary-dark: #0284c7 (2, 132, 199)
+        private readonly Color primaryDarkColor = Color.FromArgb(2, 132, 199);
+        // --secondary-dark: #16a34a (22, 163, 74)
+        private readonly Color secondaryDarkColor = Color.FromArgb(22, 163, 74);
 
         private int tHeigth;
         private int bHeigth;
@@ -55,8 +64,17 @@ namespace MyPlayer.classes.waveimage
             settings.Width = (int)width;
             settings.DecibelScale = false;
             settings.BackgroundColor = Color.Transparent;
-            settings.TopPeakPen = new Pen(cor1);
-            settings.BottomPeakPen = new Pen(cor2);
+
+            Rectangle brushRect = new Rectangle(0, 0, width, tHeigth + bHeigth);
+            
+            // Gradiente Superior (Cores Normais)
+            LinearGradientBrush topGradientBrush = new LinearGradientBrush(brushRect, primaryColor, secondaryColor, 135f);
+            
+            // Gradiente Inferior (Cores Escuras)
+            LinearGradientBrush bottomGradientBrush = new LinearGradientBrush(brushRect, primaryDarkColor, secondaryDarkColor, 135f);
+
+            settings.TopPeakPen = new Pen(topGradientBrush);
+            settings.BottomPeakPen = new Pen(bottomGradientBrush);
             //if (imageFile != null) { settings.BackgroundImage = new Bitmap(imageFile); }
             return settings;
         }
@@ -75,7 +93,7 @@ namespace MyPlayer.classes.waveimage
                     Image? image = null;
                     try
                     {
-                        image = waveFormRenderer.Render(ar, peakProvider, settings);
+                        image = waveFormRenderer?.Render(ar, peakProvider, settings);
                     }
                     catch (Exception e)
                     {
@@ -153,9 +171,8 @@ namespace MyPlayer.classes.waveimage
         {
             if (audioFile == null || e == null || image == null || image.Width <= 0) { return; }
             MouseEventArgs me = (MouseEventArgs)e;
-            if (me == null || me.Location == null) { return; }
+            if (me == null) { return; }
             Point coordinates = me.Location;
-            if (coordinates == null) { return; }
 
             double position = (coordinates.X * audioFile.Length) / image.Width;
             audioFile.Position = Math.Min(audioFile.Length, Convert.ToInt64(position));
