@@ -13,14 +13,14 @@ namespace NAudio.WaveFormRenderer
         }
 
 
-        public override Pen TopPeakPen { get; set; }
+        public override Pen? TopPeakPen { get; set; }
 
         // not needed
-        public override Pen TopSpacerPen { get; set; }
+        public override Pen? TopSpacerPen { get; set; }
         
-        public override Pen BottomPeakPen { get; set; }
+        public override Pen? BottomPeakPen { get; set; }
         
         // not needed
-        public override Pen BottomSpacerPen { get; set; }
+        public override Pen? BottomSpacerPen { get; set; }
     }
 }

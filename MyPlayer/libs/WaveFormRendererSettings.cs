@@ -16,7 +16,7 @@ namespace NAudio.WaveFormRenderer
         }
 
         // for display purposes only
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         public int Width { get; set; }
 
@@ -24,13 +24,13 @@ namespace NAudio.WaveFormRenderer
         public int BottomHeight { get; set; }
         public int PixelsPerPeak { get; set; }
         public int SpacerPixels { get; set; }
-        public virtual Pen TopPeakPen { get; set; }
-        public virtual Pen TopSpacerPen { get; set; }
-        public virtual Pen BottomPeakPen { get; set; }
-        public virtual Pen BottomSpacerPen { get; set; }
+        public virtual Pen? TopPeakPen { get; set; }
+        public virtual Pen? TopSpacerPen { get; set; }
+        public virtual Pen? BottomPeakPen { get; set; }
+        public virtual Pen? BottomSpacerPen { get; set; }
         public bool DecibelScale { get; set; }
         public Color BackgroundColor { get; set; }
-        public Image BackgroundImage { get; set; }
+        public Image? BackgroundImage { get; set; }
         public Brush BackgroundBrush {
             get
             {

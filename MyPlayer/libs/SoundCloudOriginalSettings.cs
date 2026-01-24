@@ -16,7 +16,7 @@ namespace NAudio.WaveFormRenderer
             BackgroundColor = Color.White;
         }
 
-        public override Pen TopPeakPen
+        public override Pen? TopPeakPen
         {
             get
             {
@@ -31,7 +31,7 @@ namespace NAudio.WaveFormRenderer
         }
 
 
-        public override Pen BottomPeakPen 
+        public override Pen? BottomPeakPen 
         {
             get
             {
@@ -47,9 +47,10 @@ namespace NAudio.WaveFormRenderer
         }
 
 
-        public override Pen BottomSpacerPen
+        public override Pen? BottomSpacerPen
         {
             get { throw new InvalidOperationException("No spacer pen required"); }
+            set { /* ignore */ }
         }
 
         private Pen CreateSoundcloudBottomPen(int topHeight, int bottomHeight)

@@ -45,9 +45,12 @@ namespace NAudio.WaveFormRenderer
                     for (int n = 0; n < settings.PixelsPerPeak; n++)
                     {
                         var lineHeight = settings.TopHeight * currentPeak.Max;
-                        g.DrawLine(settings.TopPeakPen, x, midPoint, x, midPoint - lineHeight);
+                        if (settings.TopPeakPen != null)
+                            g.DrawLine(settings.TopPeakPen, x, midPoint, x, midPoint - lineHeight);
+                        
                         lineHeight = settings.BottomHeight * currentPeak.Min;
-                        g.DrawLine(settings.BottomPeakPen, x, midPoint, x, midPoint - lineHeight);
+                        if (settings.BottomPeakPen != null)
+                            g.DrawLine(settings.BottomPeakPen, x, midPoint, x, midPoint - lineHeight);
                         x++;
                     }
 
@@ -58,9 +61,12 @@ namespace NAudio.WaveFormRenderer
                         var min = Math.Max(currentPeak.Min, nextPeak.Min);
 
                         var lineHeight = settings.TopHeight * max;
-                        g.DrawLine(settings.TopSpacerPen, x, midPoint, x, midPoint - lineHeight);
+                        if (settings.TopSpacerPen != null)
+                            g.DrawLine(settings.TopSpacerPen, x, midPoint, x, midPoint - lineHeight);
+
                         lineHeight = settings.BottomHeight * min;
-                        g.DrawLine(settings.BottomSpacerPen, x, midPoint, x, midPoint - lineHeight); 
+                        if (settings.BottomSpacerPen != null)
+                            g.DrawLine(settings.BottomSpacerPen, x, midPoint, x, midPoint - lineHeight); 
                         x++;
                     }
                     currentPeak = nextPeak;

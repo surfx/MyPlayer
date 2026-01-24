@@ -4,11 +4,12 @@ namespace MyPlayer.classes.controleestados
 {
     internal class FormularioEstado
     {
-        public string MusicPath { get; set; }
+        public string MusicPath { get; set; } = string.Empty;
         public int IndiceMusica { get; set; }
         // Use o DTO aqui para garantir compatibilidade com JSON
         public List<MusicaDTO> Musicas { get; set; } = new List<MusicaDTO>();
-        public ListVewState ListVewStateProp { get; set; }
+        public bool IsDarkMode { get; set; }
+        public ListVewState ListVewStateProp { get; set; } = new();
 
         public override string ToString()
         {
@@ -20,7 +21,7 @@ namespace MyPlayer.classes.controleestados
 internal class ListVewState
 {
     public int View { get; set; }
-    public List<int> ColumnWidths { get; set; }
+    public List<int> ColumnWidths { get; set; } = new List<int>();
 
     public override string ToString()
     {

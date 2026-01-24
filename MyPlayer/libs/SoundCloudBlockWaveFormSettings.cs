@@ -6,7 +6,7 @@ namespace NAudio.WaveFormRenderer
     {
         private readonly Color topSpacerStartColor;
         private Pen topPen;
-        private Pen topSpacerPen;
+        private Pen? topSpacerPen;
         private Pen bottomPen;
         private Pen bottomSpacerPen;
 
@@ -25,15 +25,15 @@ namespace NAudio.WaveFormRenderer
             TopSpacerGradientStartColor = Color.White;
         }
 
-        public override Pen TopPeakPen
+        public override Pen? TopPeakPen
         {
             get { return topPen; }
-            set { topPen = value; }
+            set { if (value != null) topPen = value; }
         }
 
         public Color TopSpacerGradientStartColor { get; set; }
 
-        public override Pen TopSpacerPen
+        public override Pen? TopSpacerPen
         {
             get
             {
@@ -49,17 +49,17 @@ namespace NAudio.WaveFormRenderer
         }
 
 
-        public override Pen BottomPeakPen
+        public override Pen? BottomPeakPen
         {
             get { return bottomPen; }
-            set { bottomPen = value; }
+            set { if (value != null) bottomPen = value; }
         }
 
 
-        public override Pen BottomSpacerPen
+        public override Pen? BottomSpacerPen
         {
             get { return bottomSpacerPen; }
-            set { bottomSpacerPen = value; }
+            set { if (value != null) bottomSpacerPen = value; }
         }
 
     }

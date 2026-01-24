@@ -39,5 +39,31 @@ namespace MyPlayer.classes.util
             }
         }
 
+        public static ImageList CreateWhiteImageList(ImageList original)
+        {
+            ImageList newList = new ImageList();
+            newList.ImageSize = original.ImageSize;
+            newList.ColorDepth = original.ColorDepth;
+
+            foreach (Image img in original.Images)
+            {
+                Bitmap bmp = new Bitmap(img);
+                for (int y = 0; y < bmp.Height; y++)
+                {
+                    for (int x = 0; x < bmp.Width; x++)
+                    {
+                        Color p = bmp.GetPixel(x, y);
+                        // Se o pixel tem visibilidade (Alpha > 0), transforma em branco mantendo o Alpha
+                        if (p.A > 0)
+                        {
+                            bmp.SetPixel(x, y, Color.FromArgb(p.A, 255, 255, 255));
+                        }
+                    }
+                }
+                newList.Images.Add(bmp);
+            }
+            return newList;
+        }
+
     }
 }

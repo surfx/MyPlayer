@@ -40,6 +40,10 @@ namespace MyPlayer
 
         #region form
 
+        private bool _isDarkMode = false;
+        private ImageList? _lightImageList;
+        private ImageList? _darkImageList;
+
         public frmMyPlayer()
         {
             InitializeComponent();
@@ -47,6 +51,14 @@ namespace MyPlayer
 
         private void frmMyPlayer_Load(object sender, EventArgs e)
         {
+            // Prepara as listas de imagens
+            _lightImageList = imageList1;
+            _darkImageList = Util.CreateWhiteImageList(_lightImageList);
+
+            // Detecta e aplica o tema inicial
+            _isDarkMode = ThemeManager.IsSystemDarkMode();
+            ApplyCurrentTheme();
+
 #if DEBUG
             AllocConsole();
 #endif
@@ -78,6 +90,48 @@ namespace MyPlayer
             }
 
             playMusic();
+        }
+
+        private void btnDarkMode_Click(object sender, EventArgs e)
+        {
+            _isDarkMode = !_isDarkMode;
+            ApplyCurrentTheme();
+        }
+
+        private void ApplyCurrentTheme()
+        {
+            ThemeManager.ApplyTheme(this, _isDarkMode);
+            
+            // Troca o conjunto de ícones (Preto vs Branco)
+            ImageList? targetList = _isDarkMode ? _darkImageList : _lightImageList;
+            if (targetList != null)
+            {
+                // Botões
+                btnOpenFolderMusics.ImageList = targetList;
+                btnRandomizar.ImageList = targetList;
+                btnVoltar.ImageList = targetList;
+                btnPlayPause.ImageList = targetList;
+                btnProximo.ImageList = targetList;
+                btnClearPlayList.ImageList = targetList;
+                btnExcluirMusicasPlayList.ImageList = targetList;
+                btnSalvarMusicasPlayList.ImageList = targetList;
+                btnCarregarMusicasPlayList.ImageList = targetList;
+                
+                // Controles de Lista
+                treeView1.ImageList = targetList;
+                listView1.SmallImageList = targetList;
+                listView1.LargeImageList = targetList;
+            }
+
+            // Atualiza o ícone do botão (Texto Unicode por enquanto)
+            // Se está dark, mostra Sol (para mudar pra light). Se está light, mostra Lua.
+            btnDarkMode.Text = _isDarkMode ? "☀" : "🌙"; 
+            
+            // Ajustes específicos que o ThemeManager genérico pode não cobrir perfeitamente
+            if (_isDarkMode)
+            {
+                 // Ajustes finos se necessário
+            }
         }
 
         private void frmMyPlayer_Shown(object sender, EventArgs e)
@@ -123,8 +177,23 @@ namespace MyPlayer
 
         #region controle estados
         private FormularioEstado _estadoAtual = new();
-        private void SalvarEstadoDoFormulario(bool clearFilter = true) => EstadoFormAux.SalvarEstadoDoFormulario(ref txtFiltro, ref _filtrarMusicas, ref listView1, ref _estadoAtual, clearFilter);
-        private bool CarregarEstadoDoFormulario() => EstadoFormAux.CarregarEstadoDoFormulario(ref _estadoAtual, ref _filtrarMusicas, ref listView1, ref imageList1, AtualizarSelecaoMusicaAtual, ref txtPathMusicas, ref treeView1);
+        private void SalvarEstadoDoFormulario(bool clearFilter = true)
+        {
+            _estadoAtual.IsDarkMode = _isDarkMode;
+            _estadoAtual.Musicas = ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
+            EstadoFormAux.SalvarEstadoDoFormulario(ref txtFiltro, ref _filtrarMusicas, ref listView1, ref _estadoAtual, clearFilter);
+        }
+
+        private bool CarregarEstadoDoFormulario()
+        {
+            bool carregou = EstadoFormAux.CarregarEstadoDoFormulario(ref _estadoAtual, ref _filtrarMusicas, ref listView1, ref imageList1, AtualizarSelecaoMusicaAtual, ref txtPathMusicas, ref treeView1);
+            if (carregou)
+            {
+                _isDarkMode = _estadoAtual.IsDarkMode;
+                ApplyCurrentTheme();
+            }
+            return carregou;
+        }
         #endregion
 
         #region keypress
@@ -504,7 +573,7 @@ namespace MyPlayer
             if (InvokeAux.GetValue(listView1, lvw => lvw.Items.Count) <= 0)
             {
                 _playerControl?.Stop();
-                InvokeAux.Access(btnPlayPause, btn => btn.Text = ">");
+                InvokeAux.Access(btnPlayPause, btn => { btn.ImageIndex = (int)EImageIndex.play; btn.Text = ""; });
                 return;
             }
 

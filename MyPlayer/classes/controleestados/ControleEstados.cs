@@ -17,7 +17,8 @@ namespace MyPlayer.classes.controleestados
                     IndiceMusica = estado.IndiceMusica,
                     View = estado.ListVewStateProp.View,
                     ColumnWidths = estado.ListVewStateProp.ColumnWidths,
-                    Musicas = estado.Musicas
+                    Musicas = estado.Musicas,
+                    IsDarkMode = estado.IsDarkMode
                 };
 
                 var json = JsonSerializer.Serialize(serializavel, new JsonSerializerOptions { WriteIndented = true });
@@ -49,7 +50,8 @@ namespace MyPlayer.classes.controleestados
                         View = serializavel.View,
                         ColumnWidths = serializavel.ColumnWidths
                     },
-                    Musicas = serializavel.Musicas
+                    Musicas = serializavel.Musicas,
+                    IsDarkMode = serializavel.IsDarkMode
                 };
             }
             catch (Exception ex)
@@ -66,6 +68,7 @@ namespace MyPlayer.classes.controleestados
             public int View { get; set; }
             public List<int> ColumnWidths { get; set; } = new();
             public List<MusicaDTO> Musicas { get; set; } = new();
+            public bool IsDarkMode { get; set; }
         }
 
     }

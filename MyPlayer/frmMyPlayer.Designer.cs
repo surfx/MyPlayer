@@ -52,6 +52,7 @@
             btnSalvarMusicasPlayList = new Button();
             btnExcluirMusicasPlayList = new Button();
             btnClearPlayList = new Button();
+            btnDarkMode = new Button();
             ((System.ComponentModel.ISupportInitialize)trackBar1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox2).BeginInit();
@@ -70,19 +71,29 @@
             // 
             txtPathMusicas.Location = new Point(129, 11);
             txtPathMusicas.Name = "txtPathMusicas";
-            txtPathMusicas.Size = new Size(933, 31);
+            txtPathMusicas.Size = new Size(888, 31);
             txtPathMusicas.TabIndex = 1;
             // 
             // btnOpenFolderMusics
             // 
             btnOpenFolderMusics.ImageIndex = 8;
             btnOpenFolderMusics.ImageList = imageList1;
-            btnOpenFolderMusics.Location = new Point(1068, 9);
+            btnOpenFolderMusics.Location = new Point(1023, 9);
             btnOpenFolderMusics.Name = "btnOpenFolderMusics";
             btnOpenFolderMusics.Size = new Size(45, 34);
             btnOpenFolderMusics.TabIndex = 2;
             btnOpenFolderMusics.UseVisualStyleBackColor = true;
             btnOpenFolderMusics.Click += btnOpenFolderMusics_Click;
+            // 
+            // btnDarkMode
+            // 
+            btnDarkMode.Location = new Point(1074, 9);
+            btnDarkMode.Name = "btnDarkMode";
+            btnDarkMode.Size = new Size(45, 34);
+            btnDarkMode.TabIndex = 17;
+            btnDarkMode.Text = "🌙";
+            btnDarkMode.UseVisualStyleBackColor = true;
+            btnDarkMode.Click += btnDarkMode_Click;
             // 
             // imageList1
             // 
@@ -298,6 +309,7 @@
             Controls.Add(pictureBox2);
             Controls.Add(txtFiltro);
             Controls.Add(pictureBox1);
+            Controls.Add(btnDarkMode);
             Controls.Add(trackBar1);
             Controls.Add(progressBar1);
             Controls.Add(lblStatus);
@@ -350,5 +362,6 @@
         private Button btnSalvarMusicasPlayList;
         private Button btnExcluirMusicasPlayList;
         private Button btnClearPlayList;
+        private Button btnDarkMode;
     }
 }
