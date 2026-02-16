@@ -15,12 +15,17 @@ namespace MyPlayer.classes.util.form
             string[] ExtensoesPermitidas,
             ref FormularioEstado estadoAtual,
             ref FiltrarMusicas filtrarMusicas,
-            string path, bool clearListView = false, bool addPastas = false
+            string path, 
+            bool clearListView = false, 
+            bool addPastas = false
         )
         {
             var imageListAux = imageList;
             var estadoAtualAux = estadoAtual;
             var filtrarMusicasAux = filtrarMusicas;
+
+            // ✅ HashSet para busca O(1)
+            var extensoesSet = new HashSet<string>(ExtensoesPermitidas, StringComparer.OrdinalIgnoreCase);
 
             InvokeAux.Access(listView, lvw => {
                 lvw.BeginUpdate();
@@ -44,107 +49,115 @@ namespace MyPlayer.classes.util.form
                 // Pastas
                 if (addPastas)
                 {
-                    string[] pastas = Directory.GetDirectories(path);
-                    foreach (string pasta in pastas)
+                    try
                     {
-                        DirectoryInfo di = new(pasta);
-                        string nome = di.Name;
-
-                        if (nome.Length > MaxFileStr)
-                            nome = string.Concat(nome.AsSpan(0, MaxFileStr), "...");
-
-                        ListViewItem item = new(nome)
+                        string[] pastas = Directory.GetDirectories(path);
+                        foreach (string pasta in pastas)
                         {
-                            ImageIndex = 0, // folder fechado
-                            Tag = di.FullName
-                        };
-                        item.SubItems.Add(""); // tamanho vazio para pastas
-                        item.SubItems.Add(di.LastWriteTime.ToString());
-                        lvw.Items.Add(item);
+                            DirectoryInfo di = new(pasta);
+                            string nome = di.Name;
+
+                            if (nome.Length > MaxFileStr)
+                                nome = string.Concat(nome.AsSpan(0, MaxFileStr), "...");
+
+                            ListViewItem item = new(nome)
+                            {
+                                ImageIndex = 0,
+                                Tag = di.FullName
+                            };
+                            item.SubItems.Add("");
+                            item.SubItems.Add(di.LastWriteTime.ToString("dd/MM/yyyy HH:mm"));
+                            lvw.Items.Add(item);
+                        }
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        // Ignora pastas sem permissão
                     }
                 }
 
-                string[] arquivos = Directory.GetFiles(path);
-                foreach (string arquivo in arquivos
-                    .Where(arq => ExtensoesPermitidas.Contains(Path.GetExtension(arq).ToLowerInvariant()))
-                    .Where(arq => !caminhosExistentes.Contains(arq))
-                )
+                // Arquivos
+                try
                 {
+                    string[] arquivos = Directory.GetFiles(path);
+                    
+                    var arquivosFiltrados = arquivos
+                        .Where(arq => extensoesSet.Contains(Path.GetExtension(arq)))
+                        .Where(arq => !caminhosExistentes.Contains(arq));
 
-                    FileInfo fi = new(arquivo);
-                    var musicaDto = new MusicaDTO
+                    foreach (string arquivo in arquivosFiltrados)
                     {
+                        FileInfo fi = new(arquivo);
+                        var musicaDto = new MusicaDTO
+                        {
                             Text = Path.GetFileNameWithoutExtension(fi.Name),
                             Tag = fi.FullName,
                             ImageIndex = 10,
                             SubItems = [
-                                (fi.Length / 1024).ToString("N0") + " KB",
+                                Util.FormatFileSize(fi.Length),
                                 fi.LastWriteTime.ToString("dd/MM/yyyy HH:mm")
                             ]
-                    };
-                    lvw.Items.Add(ToListViewItem(musicaDto));
+                        };
+                        lvw.Items.Add(ToListViewItem(musicaDto));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Erro ao listar arquivos: {ex.Message}", "Erro", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
 
                 lvw.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
-                //lvw.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
-
                 lvw.EndUpdate();
 
-                // atualiza a lista de musicas
-                estadoAtualAux.Musicas = ListViewAux.GetListMusicas(ref lvw, ExtensoesPermitidas);
+                // Atualiza estado
+                estadoAtualAux.Musicas = GetListMusicas(ref lvw, ExtensoesPermitidas);
                 estadoAtualAux.IndiceMusica = 0;
                 filtrarMusicasAux.SetEstado(estadoAtualAux);
             });
         }
 
-        // Retorna as músicas como ListViewItem (usado em UI)
+        /// <summary>
+        /// ✅ Otimizado com HashSet
+        /// </summary>
         public static List<MusicaDTO> GetListMusicas(ref ListView listView1, string[] extensoesPermitidas)
         {
             return InvokeAux.GetValue(listView1, lv =>
             {
-                List<MusicaDTO> rt = [];
+                var extensoesSet = new HashSet<string>(extensoesPermitidas, StringComparer.OrdinalIgnoreCase);
 
-                var itensValidos = lv.Items.Cast<ListViewItem>()
+                return lv.Items.Cast<ListViewItem>()
                     .Where(item => {
                         string? path = item.Tag?.ToString();
                         return !string.IsNullOrEmpty(path) &&
                                File.Exists(path) &&
-                               extensoesPermitidas.Contains(Path.GetExtension(path).ToLowerInvariant());
-                    });
-
-                foreach (ListViewItem item in itensValidos)
-                {
-                    var musicaDto = new MusicaDTO
+                               extensoesSet.Contains(Path.GetExtension(path));
+                    })
+                    .Select(item => new MusicaDTO
                     {
                         Text = item.Text,
                         ImageIndex = item.ImageIndex,
-                        Tag = item?.Tag?.ToString() ?? "",
-                        SubItems = []
-                    };
-
-                    if (item == null || item.SubItems == null) { continue; }
-                    foreach (var sub in item.SubItems.Cast<ListViewItem.ListViewSubItem>().Skip(1))
-                    {
-                        musicaDto.SubItems.Add(sub.Text);
-                    }
-                    rt.Add(musicaDto);
-                }
-                return rt;
+                        Tag = item.Tag?.ToString() ?? "",
+                        SubItems = item.SubItems.Cast<ListViewItem.ListViewSubItem>()
+                            .Skip(1)
+                            .Select(sub => sub.Text)
+                            .ToList()
+                    })
+                    .ToList();
             });
         }
 
-        // 🔁 Sobrecarga — retorna apenas os caminhos (List<string>)
         public static List<string> GetListMusicasPaths(ref FormularioEstado estadoAtual, ref ListView listView, string[] extensoesPermitidas)
         {
             estadoAtual.Musicas ??= GetListMusicas(ref listView, extensoesPermitidas);
             return (estadoAtual.Musicas ?? [])
-                .Select(i => i.Tag?.ToString())
+                .Select(i => i.Tag)
                 .Where(p => !string.IsNullOrEmpty(p))
                 .ToList()!;
         }
 
         #region conversores
-        // MusicaDTO -> ListViewItem
+
         public static ListViewItem ToListViewItem(MusicaDTO dto)
         {
             string nomeExibicao = dto.Text;
@@ -158,14 +171,15 @@ namespace MyPlayer.classes.util.form
                 Tag = dto.Tag,
                 ImageIndex = dto.ImageIndex
             };
+            
             foreach (var subText in dto.SubItems)
             {
                 item.SubItems.Add(subText);
             }
+            
             return item;
         }
 
-        // Esqueleto do ListView (Colunas e Estilo)
         public static void ConfigurarColunasPadrao(ListView lvw, List<int>? larguras = null)
         {
             lvw.View = View.Details;
@@ -173,12 +187,11 @@ namespace MyPlayer.classes.util.form
             lvw.CheckBoxes = true;
             lvw.Columns.Clear();
 
-            // Se não houver larguras salvas, usa valores padrão
             lvw.Columns.Add("Nome", larguras?.ElementAtOrDefault(0) ?? 300);
             lvw.Columns.Add("Tamanho", larguras?.ElementAtOrDefault(1) ?? 100, HorizontalAlignment.Right);
             lvw.Columns.Add("Data de Modificação", larguras?.ElementAtOrDefault(2) ?? 150);
         }
-        #endregion
 
+        #endregion
     }
 }

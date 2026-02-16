@@ -1,19 +1,20 @@
-﻿using MyPlayer.classes.controleestados;
+﻿using FuzzySharp;
+using MyPlayer.classes.controleestados;
 using MyPlayer.classes.playlist;
 using MyPlayer.classes.util.threads;
+using Serilog;
 
 namespace MyPlayer.classes.filtrarmusicas
 {
-    /// <summary>
-    /// filtrar músicas
-    /// </summary>
     internal class FiltrarMusicas
     {
         private FormularioEstado? _estado;
         private List<MusicaDTO>? _memory;
+        private const int FuzzyThreshold = 70; // ✅ Sensibilidade da busca fuzzy
 
         private static FiltrarMusicas? _instance = null;
         private FiltrarMusicas() { }
+        
         public static FiltrarMusicas Instance
         {
             get {
@@ -22,41 +23,68 @@ namespace MyPlayer.classes.filtrarmusicas
             }
         }
 
-        public void SetEstado(FormularioEstado estado) {
+        public void SetEstado(FormularioEstado estado) 
+        {
             _estado = estado;
-            if (estado == null) { return; }
-            _memory = estado.Musicas;
+            if (estado != null)
+            {
+                _memory = estado.Musicas;
+            }
         }
 
-        public void ResetMemory() {
+        public void ResetMemory() 
+        {
             _memory = null;
         }
 
-        public void Filtrar(string music, ListView listView)
+        /// <summary>
+        /// ✅ Filtro com suporte a Fuzzy Search
+        /// </summary>
+        public void Filtrar(string music, ListView listView, bool useFuzzy = true)
         {
             if (_estado == null || _estado.Musicas == null) return;
 
-            // Inicializa a memória na primeira vez para não perder a lista original
-            if (_memory == null) { _memory = _estado.Musicas; }
+            _memory ??= _estado.Musicas;
 
-            // Sempre partimos da memória (lista completa) para aplicar um novo filtro
             List<MusicaDTO> listaParaFiltrar = _memory;
 
-            // Aplica filtro se houver texto
             if (!string.IsNullOrWhiteSpace(music))
             {
-                string termo = music.Trim().ToLowerInvariant();
-                listaParaFiltrar = listaParaFiltrar
-                    .Where(item =>
-                        (item.Text != null && item.Text.ToLowerInvariant().Contains(termo)) ||
-                        (item.SubItems != null && item.SubItems.Any(sub => sub.ToLowerInvariant().Contains(termo))))
-                    .ToList();
+                string termo = music.Trim();
+
+                if (useFuzzy)
+                {
+                    // ✅ Busca fuzzy (tolera erros de digitação)
+                    listaParaFiltrar = listaParaFiltrar
+                        .Select(item => new 
+                        { 
+                            Item = item,
+                            Score = Math.Max(
+                                Fuzz.PartialRatio(termo, item.Text),
+                                item.SubItems.Any() 
+                                    ? item.SubItems.Max(sub => Fuzz.PartialRatio(termo, sub))
+                                    : 0
+                            )
+                        })
+                        .Where(x => x.Score >= FuzzyThreshold)
+                        .OrderByDescending(x => x.Score)
+                        .Select(x => x.Item)
+                        .ToList();
+                }
+                else
+                {
+                    // Busca exata (mais rápida)
+                    string termoLower = termo.ToLowerInvariant();
+                    listaParaFiltrar = listaParaFiltrar
+                        .Where(item =>
+                            (item.Text != null && item.Text.ToLowerInvariant().Contains(termoLower)) ||
+                            (item.SubItems != null && item.SubItems.Any(sub => sub.ToLowerInvariant().Contains(termoLower))))
+                        .ToList();
+                }
             }
 
-            // Atualiza o estado atual com o resultado do filtro
             _estado.Musicas = listaParaFiltrar;
 
-            // Atualiza ListView de forma thread-safe
             InvokeAux.Access(listView, lvw =>
             {
                 try
@@ -82,6 +110,8 @@ namespace MyPlayer.classes.filtrarmusicas
 
                         lvw.Items.Add(item);
                     }
+
+                    Log.Debug("Filtro aplicado: {Termo} → {Resultados} resultados", music, _estado.Musicas.Count);
                 }
                 finally
                 {
@@ -89,6 +119,5 @@ namespace MyPlayer.classes.filtrarmusicas
                 }
             });
         }
-
     }
 }
