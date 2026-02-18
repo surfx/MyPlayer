@@ -1,5 +1,4 @@
-﻿using FuzzySharp;
-using MyPlayer.classes.controleestados;
+﻿using MyPlayer.classes.controleestados;
 using MyPlayer.classes.playlist;
 using MyPlayer.classes.util.threads;
 using Serilog;
@@ -10,7 +9,6 @@ namespace MyPlayer.classes.filtrarmusicas
     {
         private FormularioEstado? _estado;
         private List<MusicaDTO>? _memory;
-        private const int FuzzyThreshold = 70; // ✅ Sensibilidade da busca fuzzy
 
         private static FiltrarMusicas? _instance = null;
         private FiltrarMusicas() { }
@@ -37,10 +35,7 @@ namespace MyPlayer.classes.filtrarmusicas
             _memory = null;
         }
 
-        /// <summary>
-        /// ✅ Filtro com suporte a Fuzzy Search
-        /// </summary>
-        public void Filtrar(string music, ListView listView, bool useFuzzy = true)
+        public void Filtrar(string music, ListView listView)
         {
             if (_estado == null || _estado.Musicas == null) return;
 
@@ -50,37 +45,13 @@ namespace MyPlayer.classes.filtrarmusicas
 
             if (!string.IsNullOrWhiteSpace(music))
             {
-                string termo = music.Trim();
+                string termo = music.Trim().ToLowerInvariant();
 
-                if (useFuzzy)
-                {
-                    // ✅ Busca fuzzy (tolera erros de digitação)
-                    listaParaFiltrar = listaParaFiltrar
-                        .Select(item => new 
-                        { 
-                            Item = item,
-                            Score = Math.Max(
-                                Fuzz.PartialRatio(termo, item.Text),
-                                item.SubItems.Any() 
-                                    ? item.SubItems.Max(sub => Fuzz.PartialRatio(termo, sub))
-                                    : 0
-                            )
-                        })
-                        .Where(x => x.Score >= FuzzyThreshold)
-                        .OrderByDescending(x => x.Score)
-                        .Select(x => x.Item)
-                        .ToList();
-                }
-                else
-                {
-                    // Busca exata (mais rápida)
-                    string termoLower = termo.ToLowerInvariant();
-                    listaParaFiltrar = listaParaFiltrar
-                        .Where(item =>
-                            (item.Text != null && item.Text.ToLowerInvariant().Contains(termoLower)) ||
-                            (item.SubItems != null && item.SubItems.Any(sub => sub.ToLowerInvariant().Contains(termoLower))))
-                        .ToList();
-                }
+                listaParaFiltrar = listaParaFiltrar
+                    .Where(item =>
+                        (item.Text != null && item.Text.ToLowerInvariant().Contains(termo)) ||
+                        (item.SubItems != null && item.SubItems.Any(sub => sub.ToLowerInvariant().Contains(termo))))
+                    .ToList();
             }
 
             _estado.Musicas = listaParaFiltrar;
