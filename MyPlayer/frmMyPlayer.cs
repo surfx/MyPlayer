@@ -81,8 +81,7 @@ namespace MyPlayer
                     tckbar.TickStyle = TickStyle.None;
                 });
 
-                // Se ContextMenuStripAux existir, descomente:
-                // new ContextMenuStripAux(ref listView1, ref contextMenuStrip1, _playerControl).UpdateContextMenuStrip();
+                new ContextMenuStripAux(ref listView1, ref contextMenuStrip1, _playerControl).UpdateContextMenuStrip();
 
                 string musicPath = Util.MusicPath;
                 InvokeAux.Access(txtPathMusicas, txt => txt.Text = musicPath);
