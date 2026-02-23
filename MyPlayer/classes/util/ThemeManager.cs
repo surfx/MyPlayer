@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
 namespace MyPlayer.classes.util
@@ -10,6 +11,22 @@ namespace MyPlayer.classes.util
 
     public static class ThemeManager
     {
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+        private const int DWMWA_CAPTION_COLOR = 35;
+
+        public static void SetDarkTitleBar(Form form, bool isDark)
+        {
+            try
+            {
+                int darkMode = isDark ? 1 : 0;
+                DwmSetWindowAttribute(form.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkMode, sizeof(int));
+            }
+            catch { }
+        }
+
         // Cores modernas para Modo Escuro
         private static readonly Color DarkBackColor = Color.FromArgb(30, 30, 30);
         private static readonly Color DarkForeColor = Color.FromArgb(220, 220, 220);

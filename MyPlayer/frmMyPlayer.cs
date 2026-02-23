@@ -37,6 +37,8 @@ namespace MyPlayer
         private ImageList? _lightImageList;
         private ImageList? _darkImageList;
         private Image? _trebleClefWhite;
+        private Icon? _appIconWhite;
+        private Icon? _originalIcon;
 
         // ✅ Flags de controle simplificadas
         private bool _isManualNavigation = false;  // True quando usuário clica próximo/anterior
@@ -64,6 +66,8 @@ namespace MyPlayer
             _lightImageList = imageList1;
             _darkImageList = Util.CreateWhiteImageList(_lightImageList);
             _trebleClefWhite = Util.CreateWhiteImage(Properties.Resources.icons8_treble_clef_20);
+            _originalIcon = this.Icon;
+            _appIconWhite = _originalIcon != null ? Util.CreateWhiteIcon(_originalIcon) : null;
 
             _isDarkMode = ThemeManager.IsSystemDarkMode();
                 _currentTheme = _isDarkMode ? ThemeType.Dark : ThemeType.Light;
@@ -176,6 +180,7 @@ namespace MyPlayer
         {
             ThemeManager.ApplyTheme(this, _currentTheme);
             ThemeManager.ApplyTheme(contextMenuStrip1, _currentTheme);
+            ThemeManager.SetDarkTitleBar(this, _currentTheme == ThemeType.Dark);
 
             ImageList? targetList = _currentTheme == ThemeType.Dark ? _darkImageList : _lightImageList;
             if (targetList != null)
@@ -203,6 +208,11 @@ namespace MyPlayer
             };
 
             pictureBox2.Image = _currentTheme == ThemeType.Dark ? _trebleClefWhite : Properties.Resources.icons8_treble_clef_20;
+
+            if (_currentTheme == ThemeType.Dark && _appIconWhite != null)
+                this.Icon = _appIconWhite;
+            else if (_originalIcon != null)
+                this.Icon = _originalIcon;
         }
 
         #endregion

@@ -100,6 +100,31 @@ namespace MyPlayer.classes.util
         }
 
         /// <summary>
+        /// ✅ Cria um ícone branco a partir de um ícone existente
+        /// </summary>
+        public static Icon CreateWhiteIcon(Icon original)
+        {
+            using Bitmap bmp = original.ToBitmap();
+            using Bitmap whiteBmp = new Bitmap(bmp.Width, bmp.Height);
+            Graphics g = Graphics.FromImage(whiteBmp);
+            g.Clear(Color.Transparent);
+
+            for (int y = 0; y < bmp.Height; y++)
+            {
+                for (int x = 0; x < bmp.Width; x++)
+                {
+                    Color p = bmp.GetPixel(x, y);
+                    if (p.A > 10)
+                    {
+                        whiteBmp.SetPixel(x, y, Color.FromArgb(Math.Min(255, p.A + 50), 255, 255, 255));
+                    }
+                }
+            }
+            g.Dispose();
+            return Icon.FromHandle(whiteBmp.GetHicon());
+        }
+
+        /// <summary>
         /// ✅ Formata tamanho de arquivo
         /// </summary>
         public static string FormatFileSize(long bytes)
