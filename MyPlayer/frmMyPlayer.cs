@@ -187,7 +187,7 @@ namespace MyPlayer
                 listView1.LargeImageList = targetList;
             }
 
-            btnDarkMode.Text = _isDarkMode ? "☀" : "🌙";
+            btnDarkMode.Text = _isDarkMode ? "☀" : "🌑";
         }
 
         #endregion

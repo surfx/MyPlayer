@@ -293,7 +293,7 @@
             btnDarkMode.Name = "btnDarkMode";
             btnDarkMode.Size = new Size(45, 34);
             btnDarkMode.TabIndex = 17;
-            btnDarkMode.Text = "🌙";
+            btnDarkMode.Text = "🌑";
             btnDarkMode.UseVisualStyleBackColor = true;
             btnDarkMode.Click += btnDarkMode_Click;
             // 
