@@ -33,6 +33,7 @@ namespace MyPlayer
         private FormularioEstado _estadoAtual = new();
 
         private bool _isDarkMode = false;
+        private ThemeType _currentTheme = ThemeType.Light;
         private ImageList? _lightImageList;
         private ImageList? _darkImageList;
 
@@ -63,6 +64,7 @@ namespace MyPlayer
                 _darkImageList = Util.CreateWhiteImageList(_lightImageList);
 
                 _isDarkMode = ThemeManager.IsSystemDarkMode();
+                _currentTheme = _isDarkMode ? ThemeType.Dark : ThemeType.Light;
                 ApplyCurrentTheme();
 
                 GlobalKeyboardHook.SetHook(handleKeyPress);
@@ -159,7 +161,10 @@ namespace MyPlayer
 
         private void btnDarkMode_Click(object sender, EventArgs e)
         {
-            _isDarkMode = !_isDarkMode;
+            _currentTheme = _currentTheme == ThemeType.Light ? ThemeType.Dark : ThemeType.Light;
+            
+            _isDarkMode = _currentTheme == ThemeType.Dark;
+            
             ApplyCurrentTheme();
             _estadoAtual.IsDarkMode = _isDarkMode;
             SalvarEstadoDoFormulario(false);
@@ -167,9 +172,9 @@ namespace MyPlayer
 
         private void ApplyCurrentTheme()
         {
-            ThemeManager.ApplyTheme(this, _isDarkMode);
+            ThemeManager.ApplyTheme(this, _currentTheme);
 
-            ImageList? targetList = _isDarkMode ? _darkImageList : _lightImageList;
+            ImageList? targetList = _currentTheme == ThemeType.Dark ? _darkImageList : _lightImageList;
             if (targetList != null)
             {
                 btnOpenFolderMusics.ImageList = targetList;
@@ -187,7 +192,12 @@ namespace MyPlayer
                 listView1.LargeImageList = targetList;
             }
 
-            btnDarkMode.Text = _isDarkMode ? "☀" : "🌑";
+            btnDarkMode.Text = _currentTheme switch
+            {
+                ThemeType.Light => "🌑",
+                ThemeType.Dark => "☀",
+                _ => "🌑"
+            };
         }
 
         #endregion
@@ -233,6 +243,7 @@ namespace MyPlayer
             if (carregou)
             {
                 _isDarkMode = _estadoAtual.IsDarkMode;
+                _currentTheme = _isDarkMode ? ThemeType.Dark : ThemeType.Light;
                 ApplyCurrentTheme();
             }
             return carregou;
