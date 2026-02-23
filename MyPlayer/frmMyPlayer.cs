@@ -38,7 +38,6 @@ namespace MyPlayer
 
         // ✅ Flags de controle simplificadas
         private bool _isManualNavigation = false;  // True quando usuário clica próximo/anterior
-        private bool _isDoubleClick = false;       // True quando usuário dá duplo clique na lista
 
         private enum EImageIndex : int { play = 3, pause = 9 }
 
@@ -198,7 +197,14 @@ namespace MyPlayer
         private void SalvarEstadoDoFormulario(bool clearFilter = true)
         {
             _estadoAtual.IsDarkMode = _isDarkMode;
-            _estadoAtual.Musicas = ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
+            if (_filtrarMusicas.GetAllItems() != null)
+            {
+                _estadoAtual.Musicas = ListViewAux.FromListViewItems(_filtrarMusicas.GetAllItems()!);
+            }
+            else
+            {
+                _estadoAtual.Musicas = ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
+            }
             EstadoFormAux.SalvarEstadoDoFormulario(
                 ref txtFiltro, ref _filtrarMusicas, ref listView1, ref _estadoAtual, clearFilter);
         }
@@ -206,7 +212,14 @@ namespace MyPlayer
         private void SalvarEstadoDebounced(bool clearFilter = false)
         {
             _estadoAtual.IsDarkMode = _isDarkMode;
-            _estadoAtual.Musicas = ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
+            if (_filtrarMusicas.GetAllItems() != null)
+            {
+                _estadoAtual.Musicas = ListViewAux.FromListViewItems(_filtrarMusicas.GetAllItems()!);
+            }
+            else
+            {
+                _estadoAtual.Musicas = ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
+            }
             EstadoFormAux.SalvarEstadoDoFormularioDebounced(
                 ref txtFiltro, ref _filtrarMusicas, ref listView1, ref _estadoAtual, clearFilter);
         }
@@ -215,7 +228,7 @@ namespace MyPlayer
         {
             bool carregou = EstadoFormAux.CarregarEstadoDoFormulario(
                 ref _estadoAtual, ref _filtrarMusicas, ref listView1, ref imageList1,
-                AtualizarSelecaoMusicaAtual, ref txtPathMusicas, ref treeView1);
+                AtualizarSelecaoMusicaAtual, ref txtPathMusicas, ref treeView1, ref txtFiltro);
 
             if (carregou)
             {
@@ -270,20 +283,16 @@ namespace MyPlayer
         /// </summary>
         private void playMusic()
         {
-            _estadoAtual.Musicas ??= ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
+            NormalizarIndice();
 
-            var listaAtual = GetCurrentPlaylist();
-            if (listaAtual == null || listaAtual.Count == 0)
+            var item = GetCurrentItem();
+            if (item == null)
             {
                 Log.Warning("Tentativa de tocar música com lista vazia");
                 return;
             }
 
-            // Normaliza índice
-            NormalizarIndice();
-
-            var musicaAtual = listaAtual[_estadoAtual.IndiceMusica];
-            string? path = musicaAtual.Tag;
+            string? path = item.Tag?.ToString();
 
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
@@ -293,10 +302,8 @@ namespace MyPlayer
                 return;
             }
 
-            // Dispose do player anterior
             DisposePlayer();
 
-            // Feedback visual
             InvokeAux.Access(lblStatus, lbl => lbl.Text = "Carregando...");
             InvokeAux.Access(btnPlayPause, btn => btn.Enabled = false);
 
@@ -304,7 +311,6 @@ namespace MyPlayer
             {
                 _playerControl = new PlayerControl(path);
 
-                // Registra eventos
                 _playerControl.EvtProgressUpdated += Player_ProgressUpdated;
                 _playerControl.EvtPlaying += Player_EvtPlaying;
                 _playerControl.EvtPaused += Player_EvtPaused;
@@ -314,7 +320,6 @@ namespace MyPlayer
 
                 _playerControl.Play();
 
-                // Visualização de onda
                 if (_playerControl.AudioFileReaderProp != null)
                 {
                     _wi?.Dispose();
@@ -353,30 +358,55 @@ namespace MyPlayer
         /// </summary>
         private void NormalizarIndice()
         {
-            List<MusicaDTO>? listaAtual = GetCurrentPlaylist();
-            if (listaAtual == null || listaAtual.Count == 0)
+            int count = InvokeAux.GetValue(listView1, lvw => lvw.Items.Count);
+            if (count == 0)
             {
                 _estadoAtual.IndiceMusica = 0;
                 return;
             }
 
             if (_estadoAtual.IndiceMusica < 0)
-                _estadoAtual.IndiceMusica = listaAtual.Count - 1;
+                _estadoAtual.IndiceMusica = count - 1;
             
-            if (_estadoAtual.IndiceMusica >= listaAtual.Count)
+            if (_estadoAtual.IndiceMusica >= count)
                 _estadoAtual.IndiceMusica = 0;
+
+            if (!_filtrarMusicas.ItemCorrespondeFiltro(GetCurrentItem()!))
+            {
+                _estadoAtual.IndiceMusica = EncontrarProximoIndiceValido(_estadoAtual.IndiceMusica, true);
+            }
+        }
+
+        private int EncontrarProximoIndiceValido(int inicio, bool forward)
+        {
+            return InvokeAux.GetValue(listView1, lvw =>
+            {
+                int count = lvw.Items.Count;
+                if (count == 0) return 0;
+
+                int startIdx = forward ? (inicio + 1) % count : (inicio - 1 + count) % count;
+                
+                for (int i = 0; i < count; i++)
+                {
+                    int idx = (startIdx + i * (forward ? 1 : -1) + count) % count;
+                    if (_filtrarMusicas.ItemCorrespondeFiltro(lvw.Items[idx]))
+                        return idx;
+                }
+                return 0;
+            });
         }
 
         /// <summary>
-        /// ✅ Retorna a lista de músicas atual (filtrada ou original)
+        /// ✅ Retorna a música no índice atual do ListView
         /// </summary>
-        private List<MusicaDTO>? GetCurrentPlaylist()
+        private ListViewItem? GetCurrentItem()
         {
-            if (_filtrarMusicas.FilteredList != null && _filtrarMusicas.FilteredList.Count > 0)
+            return InvokeAux.GetValue(listView1, lvw =>
             {
-                return _filtrarMusicas.FilteredList;
-            }
-            return _estadoAtual.Musicas;
+                if (lvw.Items.Count == 0 || _estadoAtual.IndiceMusica < 0 || _estadoAtual.IndiceMusica >= lvw.Items.Count)
+                    return (ListViewItem?)null;
+                return lvw.Items[_estadoAtual.IndiceMusica];
+            });
         }
 
         /// <summary>
@@ -463,19 +493,15 @@ namespace MyPlayer
         /// </summary>
         private void nextMusic()
         {
-            var listaAtual = GetCurrentPlaylist();
-            if (listaAtual == null || listaAtual.Count == 0) return;
+            int count = InvokeAux.GetValue(listView1, lvw => lvw.Items.Count);
+            if (count == 0) return;
 
             _isManualNavigation = true;
             
-            // Para o player atual
             DisposePlayer();
             
-            // Avança o índice
-            _estadoAtual.IndiceMusica++;
-            NormalizarIndice();
+            _estadoAtual.IndiceMusica = EncontrarProximoIndiceValido(_estadoAtual.IndiceMusica, true);
             
-            // Toca a próxima
             playMusic();
             
             _isManualNavigation = false;
@@ -486,19 +512,15 @@ namespace MyPlayer
         /// </summary>
         private void previousMusic()
         {
-            var listaAtual = GetCurrentPlaylist();
-            if (listaAtual == null || listaAtual.Count == 0) return;
+            int count = InvokeAux.GetValue(listView1, lvw => lvw.Items.Count);
+            if (count == 0) return;
 
             _isManualNavigation = true;
             
-            // Para o player atual
             DisposePlayer();
             
-            // Volta o índice
-            _estadoAtual.IndiceMusica--;
-            NormalizarIndice();
+            _estadoAtual.IndiceMusica = EncontrarProximoIndiceValido(_estadoAtual.IndiceMusica, false);
             
-            // Toca a anterior
             playMusic();
             
             _isManualNavigation = false;
@@ -574,28 +596,16 @@ namespace MyPlayer
         /// </summary>
         private void Player_EvtMusicEnded(object? sender, EventArgs e)
         {
-            // Se foi navegação manual (próximo/anterior/stop), ignora
             if (_isManualNavigation) return;
-            
-            // Se foi duplo clique, ignora (playMusic já foi chamado)
-            if (_isDoubleClick)
-            {
-                _isDoubleClick = false;
-                return;
-            }
 
-            var listaAtual = GetCurrentPlaylist();
-            if (listaAtual == null || listaAtual.Count == 0) return;
+            int count = InvokeAux.GetValue(listView1, lvw => lvw.Items.Count);
+            if (count == 0) return;
 
             Log.Debug("Música terminou naturalmente, avançando...");
             
-            // Avança para próxima música automaticamente
-            _estadoAtual.IndiceMusica++;
-            NormalizarIndice();
+            _estadoAtual.IndiceMusica = EncontrarProximoIndiceValido(_estadoAtual.IndiceMusica, true);
             
-            // Verifica se ainda há músicas na lista após avançar
-            listaAtual = GetCurrentPlaylist();
-            if (listaAtual == null || listaAtual.Count == 0 || _estadoAtual.IndiceMusica >= listaAtual.Count)
+            if (!_filtrarMusicas.ItemCorrespondeFiltro(GetCurrentItem()!))
             {
                 _estadoAtual.IndiceMusica = 0;
                 updateFormTitle(true);
@@ -647,13 +657,10 @@ namespace MyPlayer
                 return;
             }
 
-            var listaAtual = GetCurrentPlaylist();
-            if (listaAtual != null && 
-                _estadoAtual.IndiceMusica >= 0 && 
-                _estadoAtual.IndiceMusica < listaAtual.Count)
+            var item = GetCurrentItem();
+            if (item != null)
             {
-                MusicaDTO itemAtual = listaAtual[_estadoAtual.IndiceMusica];
-                string nomeSemExtensao = Path.GetFileNameWithoutExtension(itemAtual.Text);
+                string nomeSemExtensao = Path.GetFileNameWithoutExtension(item.Text);
                 string title = $"My Player | {nomeSemExtensao}";
 
                 if (!string.IsNullOrEmpty(status))
@@ -790,16 +797,12 @@ namespace MyPlayer
         {
             if (InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems.Count) == 0) return;
 
-            _isDoubleClick = true;
             _isManualNavigation = true;
             
-            // Para o player atual
             DisposePlayer();
             
-            // Atualiza o índice para o item clicado
             _estadoAtual.IndiceMusica = InvokeAux.GetValue(listView1, lvw => lvw.SelectedItems[0].Index);
             
-            // Toca a música selecionada
             _isManualNavigation = false;
             playMusic();
         }

@@ -158,6 +158,20 @@ namespace MyPlayer.classes.util.form
 
         #region conversores
 
+        public static List<MusicaDTO> FromListViewItems(List<ListViewItem> items)
+        {
+            return items.Select(item => new MusicaDTO
+            {
+                Text = item.Text,
+                Tag = item.Tag?.ToString() ?? "",
+                ImageIndex = item.ImageIndex,
+                SubItems = item.SubItems.Cast<ListViewItem.ListViewSubItem>()
+                    .Skip(1)
+                    .Select(sub => sub.Text)
+                    .ToList()
+            }).ToList();
+        }
+
         public static ListViewItem ToListViewItem(MusicaDTO dto)
         {
             string nomeExibicao = dto.Text;

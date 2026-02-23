@@ -1,5 +1,3 @@
-﻿using MyPlayer.classes.controleestados;
-using MyPlayer.classes.playlist;
 using MyPlayer.classes.util.threads;
 using Serilog;
 
@@ -7,14 +5,12 @@ namespace MyPlayer.classes.filtrarmusicas
 {
     internal class FiltrarMusicas
     {
-        private FormularioEstado? _estado;
-        private List<MusicaDTO>? _memory;
-        private List<MusicaDTO>? _filteredList;
-
-        public List<MusicaDTO>? FilteredList => _filteredList;
+        private List<ListViewItem>? _originalItems;
 
         private static FiltrarMusicas? _instance = null;
         private FiltrarMusicas() { }
+
+        public string TermoFiltro { get; private set; } = string.Empty;
         
         public static FiltrarMusicas Instance
         {
@@ -24,75 +20,78 @@ namespace MyPlayer.classes.filtrarmusicas
             }
         }
 
-        public void SetEstado(FormularioEstado estado) 
+        public void SetEstado(MyPlayer.classes.controleestados.FormularioEstado estado) 
         {
-            _estado = estado;
-            if (estado != null)
-            {
-                _memory = estado.Musicas;
-            }
         }
 
         public void ResetMemory() 
         {
-            _memory = null;
-            _filteredList = null;
+            TermoFiltro = string.Empty;
+            _originalItems = null;
         }
 
-        public void Filtrar(string music, ListView listView)
+        public void Filtrar(string termo, ListView listView)
         {
-            if (_estado == null || _estado.Musicas == null) return;
-
-            _memory ??= _estado.Musicas;
-
-            List<MusicaDTO> listaParaFiltrar = _memory;
-
-            if (!string.IsNullOrWhiteSpace(music))
-            {
-                string termo = music.Trim().ToLowerInvariant();
-
-                listaParaFiltrar = listaParaFiltrar
-                    .Where(item =>
-                        (item.Text != null && item.Text.ToLowerInvariant().Contains(termo)) ||
-                        (item.SubItems != null && item.SubItems.Any(sub => sub.ToLowerInvariant().Contains(termo))))
-                    .ToList();
-            }
-
-            _filteredList = listaParaFiltrar;
-
             InvokeAux.Access(listView, lvw =>
             {
-                try
-                {
-                    lvw.BeginUpdate();
-                    lvw.Items.Clear();
+                lvw.BeginUpdate();
 
-                    foreach (var mDto in _filteredList)
+                TermoFiltro = termo?.Trim() ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(TermoFiltro))
+                {
+                    if (_originalItems != null)
                     {
-                        ListViewItem item = new ListViewItem(mDto.Text)
-                        {
-                            Tag = mDto.Tag,
-                            ImageIndex = mDto.ImageIndex
-                        };
-
-                        if (mDto.SubItems != null)
-                        {
-                            foreach (var subText in mDto.SubItems)
-                            {
-                                item.SubItems.Add(subText);
-                            }
-                        }
-
-                        lvw.Items.Add(item);
+                        lvw.Items.Clear();
+                        lvw.Items.AddRange(_originalItems.ToArray());
+                        _originalItems = null;
                     }
-
-                    Log.Debug("Filtro aplicado: {Termo} → {Resultados} resultados", music, _filteredList.Count);
-                }
-                finally
-                {
                     lvw.EndUpdate();
+                    return;
                 }
+
+                if (_originalItems == null)
+                {
+                    _originalItems = lvw.Items.Cast<ListViewItem>().ToList();
+                }
+
+                lvw.Items.Clear();
+
+                string termoLower = TermoFiltro.ToLowerInvariant();
+                var filtrados = _originalItems.Where(item =>
+                    item.Text.ToLowerInvariant().Contains(termoLower) ||
+                    (item.SubItems != null && item.SubItems.Cast<ListViewItem.ListViewSubItem>()
+                        .Any(sub => sub.Text.ToLowerInvariant().Contains(termoLower)))
+                ).ToList();
+
+                lvw.Items.AddRange(filtrados.ToArray());
+
+                lvw.EndUpdate();
             });
+        }
+
+        public List<ListViewItem>? GetAllItems()
+        {
+            return _originalItems;
+        }
+
+        public bool ItemCorrespondeFiltro(ListViewItem item)
+        {
+            if (string.IsNullOrWhiteSpace(TermoFiltro))
+                return true;
+
+            string termoLower = TermoFiltro.ToLowerInvariant();
+            
+            if (item.Text.ToLowerInvariant().Contains(termoLower))
+                return true;
+
+            if (item.SubItems != null)
+            {
+                return item.SubItems.Cast<ListViewItem.ListViewSubItem>()
+                    .Any(sub => sub.Text.ToLowerInvariant().Contains(termoLower));
+            }
+
+            return false;
         }
     }
 }

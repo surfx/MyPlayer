@@ -90,6 +90,11 @@ namespace MyPlayer.classes.util.form
                     InvokeAux.Access(txtFiltro, txt => txt.Text = string.Empty);
                     filtrarMusicas.ResetMemory();
                 }
+                else
+                {
+                    string filtroAtual = InvokeAux.GetValue(txtFiltro, txt => txt.Text);
+                    estadoAtual.FiltroTexto = filtroAtual;
+                }
 
                 // Salva larguras das colunas
                 estadoAtual.ListVewStateProp.ColumnWidths = InvokeAux.GetValue(listView, lv =>
@@ -117,7 +122,8 @@ namespace MyPlayer.classes.util.form
             ref ImageList imageList,
             Action atualizarSelecao,
             ref TextBox txtPath,
-            ref TreeView treeView)
+            ref TreeView treeView,
+            ref TextBox txtFiltro)
         {
             try
             {
@@ -134,12 +140,15 @@ namespace MyPlayer.classes.util.form
                 estadoAtual.Musicas = estadoCarregado.Musicas;
                 estadoAtual.IsDarkMode = estadoCarregado.IsDarkMode;
                 estadoAtual.ListVewStateProp = estadoCarregado.ListVewStateProp;
+                string filtroTexto = estadoCarregado.FiltroTexto;
 
                 filtrarMusicas.SetEstado(estadoAtual);
 
                 // ✅ Captura variáveis locais para uso no lambda
                 var estadoLocal = estadoAtual;
                 var imageListLocal = imageList;
+                var filtrarMusicasLocal = filtrarMusicas;
+                var txtFiltroLocal = txtFiltro;
 
                 InvokeAux.Access(listView, lv =>
                 {
@@ -167,6 +176,12 @@ namespace MyPlayer.classes.util.form
                 {
                     InvokeAux.Access(txtPath, txt => txt.Text = musicPath);
                     TreeViewUtil.PreencherTreeView(treeView, musicPath);
+                }
+
+                if (!string.IsNullOrEmpty(filtroTexto))
+                {
+                    InvokeAux.Access(txtFiltroLocal, txt => txt.Text = filtroTexto);
+                    filtrarMusicasLocal.Filtrar(filtroTexto, listView);
                 }
 
                 Log.Information("Estado carregado: {Estado}", estadoAtual);
