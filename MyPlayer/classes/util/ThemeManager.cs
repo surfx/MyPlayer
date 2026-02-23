@@ -76,6 +76,26 @@ namespace MyPlayer.classes.util
             ApplyRecursive(form, themeType);
         }
 
+        public static void ApplyTheme(ContextMenuStrip contextMenuStrip, ThemeType themeType)
+        {
+            bool isDark = themeType == ThemeType.Dark;
+            bool isRainbow = themeType == ThemeType.Dark;
+
+            Color controlBack = isRainbow ? Color.FromArgb(35, 35, 50) : (isDark ? DarkControlColor : LightControlColor);
+            Color controlFore = isRainbow ? Color.White : (isDark ? DarkForeColor : LightForeColor);
+
+            if (isDark || isRainbow)
+            {
+                contextMenuStrip.BackColor = controlBack;
+                contextMenuStrip.ForeColor = controlFore;
+            }
+            else
+            {
+                contextMenuStrip.BackColor = SystemColors.Control;
+                contextMenuStrip.ForeColor = SystemColors.ControlText;
+            }
+        }
+
         public static void ApplyTheme(Form form, bool isDark)
         {
             ApplyTheme(form, isDark ? ThemeType.Dark : ThemeType.Light);

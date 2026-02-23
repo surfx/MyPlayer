@@ -54,21 +54,49 @@ namespace MyPlayer.classes.util
             {
                 using Bitmap bmp = new Bitmap(img);
                 Bitmap whiteBmp = new Bitmap(bmp.Width, bmp.Height);
-                
+                Graphics g = Graphics.FromImage(whiteBmp);
+                g.Clear(Color.Transparent);
+
                 for (int y = 0; y < bmp.Height; y++)
                 {
                     for (int x = 0; x < bmp.Width; x++)
                     {
                         Color p = bmp.GetPixel(x, y);
-                        if (p.A > 0)
+                        if (p.A > 10)
                         {
-                            whiteBmp.SetPixel(x, y, Color.FromArgb(p.A, 255, 255, 255));
+                            whiteBmp.SetPixel(x, y, Color.FromArgb(Math.Min(255, p.A + 50), 255, 255, 255));
                         }
                     }
                 }
+                g.Dispose();
                 newList.Images.Add(whiteBmp);
             }
             return newList;
+        }
+
+        /// <summary>
+        /// ✅ Cria uma cópia de uma imagem com ícones brancos (para tema escuro)
+        /// </summary>
+        public static Image CreateWhiteImage(Image original)
+        {
+            using Bitmap bmp = new Bitmap(original);
+            Bitmap whiteBmp = new Bitmap(bmp.Width, bmp.Height);
+            Graphics g = Graphics.FromImage(whiteBmp);
+            g.Clear(Color.Transparent);
+
+            for (int y = 0; y < bmp.Height; y++)
+            {
+                for (int x = 0; x < bmp.Width; x++)
+                {
+                    Color p = bmp.GetPixel(x, y);
+                    if (p.A > 10)
+                    {
+                        whiteBmp.SetPixel(x, y, Color.FromArgb(Math.Min(255, p.A + 50), 255, 255, 255));
+                    }
+                }
+            }
+            g.Dispose();
+            return whiteBmp;
         }
 
         /// <summary>
