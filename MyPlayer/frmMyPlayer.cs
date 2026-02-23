@@ -272,7 +272,8 @@ namespace MyPlayer
         {
             _estadoAtual.Musicas ??= ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
 
-            if (_estadoAtual.Musicas == null || _estadoAtual.Musicas.Count == 0)
+            var listaAtual = GetCurrentPlaylist();
+            if (listaAtual == null || listaAtual.Count == 0)
             {
                 Log.Warning("Tentativa de tocar música com lista vazia");
                 return;
@@ -281,7 +282,7 @@ namespace MyPlayer
             // Normaliza índice
             NormalizarIndice();
 
-            var musicaAtual = _estadoAtual.Musicas[_estadoAtual.IndiceMusica];
+            var musicaAtual = listaAtual[_estadoAtual.IndiceMusica];
             string? path = musicaAtual.Tag;
 
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
@@ -352,17 +353,30 @@ namespace MyPlayer
         /// </summary>
         private void NormalizarIndice()
         {
-            if (_estadoAtual.Musicas == null || _estadoAtual.Musicas.Count == 0)
+            List<MusicaDTO>? listaAtual = GetCurrentPlaylist();
+            if (listaAtual == null || listaAtual.Count == 0)
             {
                 _estadoAtual.IndiceMusica = 0;
                 return;
             }
 
             if (_estadoAtual.IndiceMusica < 0)
-                _estadoAtual.IndiceMusica = _estadoAtual.Musicas.Count - 1;
+                _estadoAtual.IndiceMusica = listaAtual.Count - 1;
             
-            if (_estadoAtual.IndiceMusica >= _estadoAtual.Musicas.Count)
+            if (_estadoAtual.IndiceMusica >= listaAtual.Count)
                 _estadoAtual.IndiceMusica = 0;
+        }
+
+        /// <summary>
+        /// ✅ Retorna a lista de músicas atual (filtrada ou original)
+        /// </summary>
+        private List<MusicaDTO>? GetCurrentPlaylist()
+        {
+            if (_filtrarMusicas.FilteredList != null && _filtrarMusicas.FilteredList.Count > 0)
+            {
+                return _filtrarMusicas.FilteredList;
+            }
+            return _estadoAtual.Musicas;
         }
 
         /// <summary>
@@ -449,8 +463,8 @@ namespace MyPlayer
         /// </summary>
         private void nextMusic()
         {
-            _estadoAtual.Musicas ??= ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
-            if (_estadoAtual.Musicas == null || _estadoAtual.Musicas.Count == 0) return;
+            var listaAtual = GetCurrentPlaylist();
+            if (listaAtual == null || listaAtual.Count == 0) return;
 
             _isManualNavigation = true;
             
@@ -472,8 +486,8 @@ namespace MyPlayer
         /// </summary>
         private void previousMusic()
         {
-            _estadoAtual.Musicas ??= ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
-            if (_estadoAtual.Musicas == null || _estadoAtual.Musicas.Count == 0) return;
+            var listaAtual = GetCurrentPlaylist();
+            if (listaAtual == null || listaAtual.Count == 0) return;
 
             _isManualNavigation = true;
             
@@ -570,13 +584,24 @@ namespace MyPlayer
                 return;
             }
 
+            var listaAtual = GetCurrentPlaylist();
+            if (listaAtual == null || listaAtual.Count == 0) return;
+
             Log.Debug("Música terminou naturalmente, avançando...");
             
             // Avança para próxima música automaticamente
             _estadoAtual.IndiceMusica++;
             NormalizarIndice();
             
-            updateFormTitle(true);
+            // Verifica se ainda há músicas na lista após avançar
+            listaAtual = GetCurrentPlaylist();
+            if (listaAtual == null || listaAtual.Count == 0 || _estadoAtual.IndiceMusica >= listaAtual.Count)
+            {
+                _estadoAtual.IndiceMusica = 0;
+                updateFormTitle(true);
+                return;
+            }
+            
             playMusic();
         }
 
@@ -622,11 +647,12 @@ namespace MyPlayer
                 return;
             }
 
-            if (_estadoAtual.Musicas != null && 
+            var listaAtual = GetCurrentPlaylist();
+            if (listaAtual != null && 
                 _estadoAtual.IndiceMusica >= 0 && 
-                _estadoAtual.IndiceMusica < _estadoAtual.Musicas.Count)
+                _estadoAtual.IndiceMusica < listaAtual.Count)
             {
-                MusicaDTO itemAtual = _estadoAtual.Musicas[_estadoAtual.IndiceMusica];
+                MusicaDTO itemAtual = listaAtual[_estadoAtual.IndiceMusica];
                 string nomeSemExtensao = Path.GetFileNameWithoutExtension(itemAtual.Text);
                 string title = $"My Player | {nomeSemExtensao}";
 
@@ -682,6 +708,8 @@ namespace MyPlayer
             _estadoAtual.Musicas ??= ListViewAux.GetListMusicas(ref listView1, ExtensoesPermitidas);
 
             if (_estadoAtual.Musicas == null || _estadoAtual.Musicas.Count == 0) return;
+
+            _filtrarMusicas.ResetMemory();
 
             // Para a música atual
             _isManualNavigation = true;
@@ -744,7 +772,13 @@ namespace MyPlayer
                     ref listView1, ref imageList1, ExtensoesPermitidas,
                     ref _estadoAtual, ref _filtrarMusicas, caminho, false, false);
 
+                _estadoAtual.IndiceMusica = 0;
                 SalvarEstadoDoFormulario(true);
+
+                if (_estadoAtual.Musicas != null && _estadoAtual.Musicas.Count > 0)
+                {
+                    playMusic();
+                }
             }
         }
 

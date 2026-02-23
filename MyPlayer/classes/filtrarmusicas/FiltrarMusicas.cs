@@ -9,6 +9,9 @@ namespace MyPlayer.classes.filtrarmusicas
     {
         private FormularioEstado? _estado;
         private List<MusicaDTO>? _memory;
+        private List<MusicaDTO>? _filteredList;
+
+        public List<MusicaDTO>? FilteredList => _filteredList;
 
         private static FiltrarMusicas? _instance = null;
         private FiltrarMusicas() { }
@@ -33,6 +36,7 @@ namespace MyPlayer.classes.filtrarmusicas
         public void ResetMemory() 
         {
             _memory = null;
+            _filteredList = null;
         }
 
         public void Filtrar(string music, ListView listView)
@@ -54,7 +58,7 @@ namespace MyPlayer.classes.filtrarmusicas
                     .ToList();
             }
 
-            _estado.Musicas = listaParaFiltrar;
+            _filteredList = listaParaFiltrar;
 
             InvokeAux.Access(listView, lvw =>
             {
@@ -63,7 +67,7 @@ namespace MyPlayer.classes.filtrarmusicas
                     lvw.BeginUpdate();
                     lvw.Items.Clear();
 
-                    foreach (var mDto in _estado.Musicas)
+                    foreach (var mDto in _filteredList)
                     {
                         ListViewItem item = new ListViewItem(mDto.Text)
                         {
@@ -82,7 +86,7 @@ namespace MyPlayer.classes.filtrarmusicas
                         lvw.Items.Add(item);
                     }
 
-                    Log.Debug("Filtro aplicado: {Termo} → {Resultados} resultados", music, _estado.Musicas.Count);
+                    Log.Debug("Filtro aplicado: {Termo} → {Resultados} resultados", music, _filteredList.Count);
                 }
                 finally
                 {
