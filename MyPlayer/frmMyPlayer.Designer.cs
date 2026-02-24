@@ -85,16 +85,6 @@
             btnOpenFolderMusics.UseVisualStyleBackColor = true;
             btnOpenFolderMusics.Click += btnOpenFolderMusics_Click;
             // 
-            // btnDarkMode
-            // 
-            btnDarkMode.Location = new Point(1074, 9);
-            btnDarkMode.Name = "btnDarkMode";
-            btnDarkMode.Size = new Size(45, 34);
-            btnDarkMode.TabIndex = 17;
-            btnDarkMode.Text = "🌙";
-            btnDarkMode.UseVisualStyleBackColor = true;
-            btnDarkMode.Click += btnDarkMode_Click;
-            // 
             // imageList1
             // 
             imageList1.ColorDepth = ColorDepth.Depth32Bit;
@@ -297,6 +287,16 @@
             btnClearPlayList.UseVisualStyleBackColor = true;
             btnClearPlayList.Click += btnClearPlayList_Click;
             // 
+            // btnDarkMode
+            // 
+            btnDarkMode.Location = new Point(1074, 9);
+            btnDarkMode.Name = "btnDarkMode";
+            btnDarkMode.Size = new Size(45, 34);
+            btnDarkMode.TabIndex = 17;
+            btnDarkMode.Text = "🌑";
+            btnDarkMode.UseVisualStyleBackColor = true;
+            btnDarkMode.Click += btnDarkMode_Click;
+            // 
             // frmMyPlayer
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
@@ -322,6 +322,7 @@
             Controls.Add(btnOpenFolderMusics);
             Controls.Add(txtPathMusicas);
             Controls.Add(label1);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
             Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             Name = "frmMyPlayer";
