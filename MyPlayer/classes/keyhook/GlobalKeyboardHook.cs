@@ -1,23 +1,29 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Windows.Input;
 
 namespace MyPlayer.classes.keyhook
 {
     internal static class GlobalKeyboardHook
     {
-        private static Action<Keys>? _handleKeyPress = null;
+        private static Action<Key>? _handleKeyPress = null;
         private static IntPtr _hookID = IntPtr.Zero;
-        private static LowLevelKeyboardProc _proc = HookCallback;
+        private static LowLevelKeyboardProc? _proc;
 
-        public static void SetHook(Action<Keys> handleKeyPress)
+        public static void SetHook(Action<Key> handleKeyPress)
         {
+            _proc = HookCallback;
             _hookID = SetHook(_proc);
             _handleKeyPress = handleKeyPress;
         }
 
         public static void Unhook()
         {
-            UnhookWindowsHookEx(_hookID);
+            if (_hookID != IntPtr.Zero)
+            {
+                UnhookWindowsHookEx(_hookID);
+                _hookID = IntPtr.Zero;
+            }
         }
 
         private static IntPtr SetHook(LowLevelKeyboardProc proc)
@@ -25,25 +31,21 @@ namespace MyPlayer.classes.keyhook
             using (Process curProcess = Process.GetCurrentProcess())
             using (ProcessModule? curModule = curProcess.MainModule)
             {
-                if (curModule?.ModuleName == null) return IntPtr.Zero;
+                if (curModule == null) return IntPtr.Zero;
                 return SetWindowsHookEx(WH_KEYBOARD_LL, proc,
-                    GetModuleHandle(curModule.ModuleName), 0);
+                    GetModuleHandle(curModule.ModuleName!), 0);
             }
         }
 
-        private delegate IntPtr LowLevelKeyboardProc(
-            int nCode, IntPtr wParam, IntPtr lParam);
+        private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 
-        private static IntPtr HookCallback(
-            int nCode, IntPtr wParam, IntPtr lParam
-        )
+        private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (_handleKeyPress != null && (nCode >= 0 && (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN)))
+            if (nCode >= 0 && (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN))
             {
                 int vkCode = Marshal.ReadInt32(lParam);
-                //Console.WriteLine((Keys)vkCode);
-                //MessageBox.Show("Tecla: " + (Keys)vkCode);
-                _handleKeyPress.Invoke((Keys)vkCode);
+                Key key = KeyInterop.KeyFromVirtualKey(vkCode);
+                _handleKeyPress?.Invoke(key);
             }
             return CallNextHookEx(_hookID, nCode, wParam, lParam);
         }

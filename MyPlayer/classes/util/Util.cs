@@ -1,5 +1,5 @@
-﻿using MyPlayer.classes.playlist;
-using Serilog;
+using MyPlayer.classes.playlist;
+using System.IO;
 
 namespace MyPlayer.classes.util
 {
@@ -37,91 +37,6 @@ namespace MyPlayer.classes.util
                 string musicPath = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
                 return musicPath.EndsWith(@"\") ? musicPath : musicPath + @"\";
             }
-        }
-
-        /// <summary>
-        /// ✅ Cria uma cópia da ImageList com ícones brancos (para tema escuro)
-        /// </summary>
-        public static ImageList CreateWhiteImageList(ImageList original)
-        {
-            ImageList newList = new ImageList
-            {
-                ImageSize = original.ImageSize,
-                ColorDepth = original.ColorDepth
-            };
-
-            foreach (Image img in original.Images)
-            {
-                using Bitmap bmp = new Bitmap(img);
-                Bitmap whiteBmp = new Bitmap(bmp.Width, bmp.Height);
-                Graphics g = Graphics.FromImage(whiteBmp);
-                g.Clear(Color.Transparent);
-
-                for (int y = 0; y < bmp.Height; y++)
-                {
-                    for (int x = 0; x < bmp.Width; x++)
-                    {
-                        Color p = bmp.GetPixel(x, y);
-                        if (p.A > 10)
-                        {
-                            whiteBmp.SetPixel(x, y, Color.FromArgb(Math.Min(255, p.A + 50), 255, 255, 255));
-                        }
-                    }
-                }
-                g.Dispose();
-                newList.Images.Add(whiteBmp);
-            }
-            return newList;
-        }
-
-        /// <summary>
-        /// ✅ Cria uma cópia de uma imagem com ícones brancos (para tema escuro)
-        /// </summary>
-        public static Image CreateWhiteImage(Image original)
-        {
-            using Bitmap bmp = new Bitmap(original);
-            Bitmap whiteBmp = new Bitmap(bmp.Width, bmp.Height);
-            Graphics g = Graphics.FromImage(whiteBmp);
-            g.Clear(Color.Transparent);
-
-            for (int y = 0; y < bmp.Height; y++)
-            {
-                for (int x = 0; x < bmp.Width; x++)
-                {
-                    Color p = bmp.GetPixel(x, y);
-                    if (p.A > 10)
-                    {
-                        whiteBmp.SetPixel(x, y, Color.FromArgb(Math.Min(255, p.A + 50), 255, 255, 255));
-                    }
-                }
-            }
-            g.Dispose();
-            return whiteBmp;
-        }
-
-        /// <summary>
-        /// ✅ Cria um ícone branco a partir de um ícone existente
-        /// </summary>
-        public static Icon CreateWhiteIcon(Icon original)
-        {
-            using Bitmap bmp = original.ToBitmap();
-            using Bitmap whiteBmp = new Bitmap(bmp.Width, bmp.Height);
-            Graphics g = Graphics.FromImage(whiteBmp);
-            g.Clear(Color.Transparent);
-
-            for (int y = 0; y < bmp.Height; y++)
-            {
-                for (int x = 0; x < bmp.Width; x++)
-                {
-                    Color p = bmp.GetPixel(x, y);
-                    if (p.A > 10)
-                    {
-                        whiteBmp.SetPixel(x, y, Color.FromArgb(Math.Min(255, p.A + 50), 255, 255, 255));
-                    }
-                }
-            }
-            g.Dispose();
-            return Icon.FromHandle(whiteBmp.GetHicon());
         }
 
         /// <summary>

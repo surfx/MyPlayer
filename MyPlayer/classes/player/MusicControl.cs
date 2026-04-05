@@ -1,4 +1,5 @@
-﻿using NAudio.Wave;
+using NAudio.Wave;
+using System.IO;
 
 namespace MyPlayer.classes.player
 {
@@ -31,11 +32,15 @@ namespace MyPlayer.classes.player
             if (!File.Exists(musicPath))
                 throw new FileNotFoundException("Arquivo de música não encontrado", musicPath);
 
+            InitializeAudio(musicPath);
+        }
+
+        private void InitializeAudio(string musicPath)
+        {
             try
             {
                 AudioFile = new AudioFileReader(musicPath);
 
-                // ✅ Valida se o arquivo é válido
                 if (AudioFile.TotalTime == TimeSpan.Zero)
                 {
                     AudioFile.Dispose();
@@ -46,20 +51,22 @@ namespace MyPlayer.classes.player
                 _waveOutEvent.Init(AudioFile);
 
                 TotalTime = AudioFile.TotalTime;
-                _waveOutEvent.PlaybackStopped += (s, e) =>
-                {
-                    EvtStop?.Invoke(this, e);
-                };
+                _waveOutEvent.PlaybackStopped += (s, e) => EvtStop?.Invoke(this, e);
             }
             catch (Exception ex) when (ex is not FileNotFoundException and not ArgumentNullException)
             {
-                // ✅ Cleanup em caso de erro
-                AudioFile?.Dispose();
-                _waveOutEvent?.Dispose();
-                AudioFile = null;
-                _waveOutEvent = null;
+                CleanupResources();
+                if (ex is InvalidDataException) throw;
                 throw new InvalidOperationException($"Erro ao inicializar áudio: {ex.Message}", ex);
             }
+        }
+
+        private void CleanupResources()
+        {
+            AudioFile?.Dispose();
+            _waveOutEvent?.Dispose();
+            AudioFile = null;
+            _waveOutEvent = null;
         }
 
         public double GetProgress()
@@ -70,8 +77,6 @@ namespace MyPlayer.classes.player
 
         public TimeSpan GetCurrentTime() => !IsValid ? TimeSpan.Zero : AudioFile!.CurrentTime;
         public long GetMaxPosition() => !IsValid ? 0 : AudioFile!.Length;
-
-        #region music control
 
         public void Play()
         {
@@ -117,46 +122,41 @@ namespace MyPlayer.classes.player
             if (!IsValid) return;
             
             _waveOutEvent?.Stop();
-            
-            try 
-            { 
-                if (AudioFile != null) 
-                    AudioFile.Position = 0; 
-            } 
-            catch (Exception ex) 
-            { 
-                Console.WriteLine($"Erro ao resetar posição: {ex.Message}");
-            }
-
+            ResetPosition();
             EvtStop?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void ResetPosition()
+        {
+            if (AudioFile == null) return;
+            try { AudioFile.Position = 0; } 
+            catch (Exception ex) { Console.WriteLine($"Erro ao resetar posição: {ex.Message}"); }
         }
 
         public void Seek(TimeSpan time)
         {
             if (!IsValid) return;
-            time = time < TimeSpan.Zero ? TimeSpan.Zero : time;
-            time = time > AudioFile!.TotalTime ? AudioFile.TotalTime : time;
+            
+            if (time < TimeSpan.Zero) time = TimeSpan.Zero;
+            if (time > AudioFile!.TotalTime) time = AudioFile.TotalTime;
+            
             AudioFile!.CurrentTime = time;
         }
 
         public void SetPosition(long position)
         {
             if (!IsValid || position < 0) return;
-            position = Math.Min(position, AudioFile!.Length);
-            AudioFile!.Position = position;
+            AudioFile!.Position = Math.Min(position, AudioFile!.Length);
         }
 
         public void SetPercent(double percent)
         {
             if (!IsValid || AudioFile == null) return;
+            
             percent = Math.Clamp(percent, 0, 100);
             var targetTime = TimeSpan.FromSeconds(TotalTime.TotalSeconds * (percent / 100.0));
             AudioFile.CurrentTime = targetTime > TotalTime ? TotalTime : targetTime;
         }
-
-        #endregion
-
-        #region dispose
 
         public void Dispose()
         {
@@ -173,18 +173,12 @@ namespace MyPlayer.classes.player
                 try
                 {
                     _waveOutEvent?.Stop();
-                    _waveOutEvent?.Dispose();
-                    AudioFile?.Dispose();
+                    CleanupResources();
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Erro ao dispor MusicControl: {ex.Message}");
-                }
+                catch (Exception ex) { Console.WriteLine($"Erro ao dispor MusicControl: {ex.Message}"); }
             }
 
             disposed = true;
         }
-
-        #endregion
     }
 }
