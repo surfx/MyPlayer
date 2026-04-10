@@ -1,0 +1,17 @@
+# Configurações
+$projectName = "MyPlayer"
+$projectPath = ".\MyPlayer\MyPlayer.csproj"
+$outputDir = ".\MyPlayer\bin\Release\net10.0-windows"
+
+Write-Host "Iniciando processo de release para $projectName..." -ForegroundColor Cyan
+
+# Executando dotnet publish
+Write-Host "Executando dotnet publish..." -ForegroundColor Green
+dotnet publish $projectPath -c Release -o $outputDir --self-contained false
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "`nRelease concluído com sucesso!" -ForegroundColor Green
+    Write-Host "Os arquivos estão disponíveis em: $(Get-Item $outputDir).FullName" -ForegroundColor Gray
+} else {
+    Write-Error "Erro durante o processo de publicação."
+}

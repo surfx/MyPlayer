@@ -216,6 +216,14 @@ namespace MyPlayer.viewmodels
 
         #region Métodos
 
+        private void UpdatePlayingStatus()
+        {
+            foreach (var musica in _fullPlaylist)
+            {
+                musica.IsPlaying = SelectedMusica != null && musica.Tag == SelectedMusica.Tag;
+            }
+        }
+
         private void ApplyFilter()
         {
             if (string.IsNullOrWhiteSpace(_filterText))
@@ -318,6 +326,8 @@ namespace MyPlayer.viewmodels
             {
                 _playerControl = new PlayerControl(path);
                 StatusText = "⌛ Carregando...";
+
+                UpdatePlayingStatus();
 
                 if (_playerControl.AudioFileReaderProp != null)
                 {
@@ -463,16 +473,24 @@ namespace MyPlayer.viewmodels
 
         private void ApplyTheme()
         {
-            var app = Application.Current as App;
+            var app = Application.Current;
             if (app == null) return;
-            app.Resources.MergedDictionaries.Clear();
+
+            // Remove apenas os dicionários de temas e estilos para evitar limpar outros recursos globais
+            for (int i = app.Resources.MergedDictionaries.Count - 1; i >= 0; i--)
+            {
+                var dict = app.Resources.MergedDictionaries[i];
+                if (dict.Source != null && dict.Source.OriginalString.Contains("/themes/"))
+                {
+                    app.Resources.MergedDictionaries.RemoveAt(i);
+                }
+            }
             
             string themeName = IsDarkMode ? "DarkTheme" : "LightTheme";
-            var themeUri = new Uri($"pack://application:,,,/themes/{themeName}.xaml");
-            var stylesUri = new Uri("pack://application:,,,/themes/Styles.xaml");
-
-            app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = themeUri });
-            app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = stylesUri });
+            
+            // Ordem é importante: Tema primeiro, Estilos depois (para sobrescrever)
+            app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri($"pack://application:,,,/themes/{themeName}.xaml") });
+            app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/themes/Styles.xaml") });
         }
 
         #endregion

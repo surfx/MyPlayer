@@ -32,24 +32,27 @@ namespace MyPlayer.views
 
         private void Waveform_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (DataContext is MainViewModel vm)
-            {
-                var element = sender as FrameworkElement;
-                if (element == null) return;
+            if (DataContext is not MainViewModel vm) return;
+            if (sender is not FrameworkElement element) return;
 
-                Point position = e.GetPosition(element);
-                double percent = (position.X / element.ActualWidth) * 100;
-                
-                vm.SeekToPercent(percent);
-            }
+            Point position = e.GetPosition(element);
+            double percent = (position.X / element.ActualWidth) * 100;
+            
+            vm.SeekToPercent(percent);
         }
 
         private void ListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            if (DataContext is MainViewModel vm && vm.SelectedMusica != null)
-            {
-                vm.PlayMusic(vm.SelectedMusica.Tag);
-            }
+            if (DataContext is not MainViewModel vm) return;
+            if (vm.SelectedMusica == null) return;
+
+            vm.PlayMusic(vm.SelectedMusica.Tag);
+        }
+
+        private void ListView_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (lstMusicas.SelectedItem == null) return;
+            lstMusicas.ScrollIntoView(lstMusicas.SelectedItem);
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)

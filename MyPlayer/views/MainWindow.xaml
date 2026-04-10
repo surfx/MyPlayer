@@ -98,7 +98,7 @@
                 <DockPanel Grid.Column="2" Margin="5,0,0,0">
                     <TextBox x:Name="txtFilter" DockPanel.Dock="Top" Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,5" Height="26" FontSize="12"/>
                     
-                    <ListView ItemsSource="{Binding Playlist}" SelectedItem="{Binding SelectedMusica}" BorderThickness="1" MouseDoubleClick="ListView_MouseDoubleClick">
+                    <ListView x:Name="lstMusicas" ItemsSource="{Binding Playlist}" SelectedItem="{Binding SelectedMusica}" BorderThickness="1" MouseDoubleClick="ListView_MouseDoubleClick" SelectionChanged="ListView_SelectionChanged">
                         <ListView.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="Abrir Pasta" Command="{Binding OpenFolderCommand}">
