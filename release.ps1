@@ -12,6 +12,7 @@ dotnet publish $projectPath -c Release -o $outputDir --self-contained false
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`nRelease concluído com sucesso!" -ForegroundColor Green
     Write-Host "Os arquivos estão disponíveis em: $(Get-Item $outputDir).FullName" -ForegroundColor Gray
+    explorer.exe $outputDir
 } else {
     Write-Error "Erro durante o processo de publicação."
 }

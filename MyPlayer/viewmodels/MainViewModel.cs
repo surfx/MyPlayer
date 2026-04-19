@@ -258,7 +258,13 @@ namespace MyPlayer.viewmodels
                 case Key.MediaPlayPause: PlayPause(); break;
                 case Key.MediaNextTrack: NextMusic(); break;
                 case Key.MediaPreviousTrack: PreviousMusic(); break;
+                case Key.MediaStop: StopMusic(); break;
             }
+        }
+
+        private void StopMusic()
+        {
+            _playerControl?.Stop();
         }
 
         private void LoadFolders(string path)
@@ -372,6 +378,8 @@ namespace MyPlayer.viewmodels
                 {
                     PlayPauseIcon = "/recursos/icones/icons8-play-20.png"; 
                     StatusText = "⏹ Parado"; 
+                    Progress = 0;
+                    CurrentTime = "00:00";
                 });
 
                 _playerControl.EvtMusicEnded += (s, e) => Application.Current.Dispatcher.Invoke(() => NextMusic());
@@ -393,8 +401,21 @@ namespace MyPlayer.viewmodels
                 return;
             }
 
-            if (_playerControl.IsPlaying) _playerControl.Pause(); 
-            else _playerControl.Resume(); 
+            if (_playerControl.IsPlaying) 
+            {
+                _playerControl.Pause(); 
+            }
+            else 
+            {
+                if (_playerControl.IsPaused)
+                {
+                    _playerControl.Resume();
+                }
+                else
+                {
+                    _playerControl.Play();
+                }
+            }
         }
 
         private void NextMusic() 
