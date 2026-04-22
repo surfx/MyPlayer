@@ -23,6 +23,7 @@ namespace MyPlayer
 
         protected override void OnExit(ExitEventArgs e)
         {
+            classes.keyhook.GlobalKeyboardHook.Unhook();
             Log.Information("Aplicação encerrada");
             Log.CloseAndFlush();
             base.OnExit(e);

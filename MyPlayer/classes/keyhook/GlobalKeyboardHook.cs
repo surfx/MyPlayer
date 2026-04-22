@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Input;
+using Serilog;
 
 namespace MyPlayer.classes.keyhook
 {
@@ -13,8 +14,18 @@ namespace MyPlayer.classes.keyhook
         public static void SetHook(Action<Key> handleKeyPress)
         {
             _proc = HookCallback;
-            _hookID = SetHook(_proc);
+            _hookID = SetWindowsHook(_proc);
             _handleKeyPress = handleKeyPress;
+
+            if (_hookID == IntPtr.Zero)
+            {
+                int errorCode = Marshal.GetLastWin32Error();
+                Log.Error("Falha ao definir GlobalKeyboardHook. Erro Win32: {ErrorCode}", errorCode);
+            }
+            else
+            {
+                Log.Information("GlobalKeyboardHook definido com sucesso. ID: {HookID}", _hookID);
+            }
         }
 
         public static void Unhook()
@@ -23,17 +34,20 @@ namespace MyPlayer.classes.keyhook
             {
                 UnhookWindowsHookEx(_hookID);
                 _hookID = IntPtr.Zero;
+                Log.Information("GlobalKeyboardHook removido");
             }
         }
 
-        private static IntPtr SetHook(LowLevelKeyboardProc proc)
+        private static IntPtr SetWindowsHook(LowLevelKeyboardProc proc)
         {
             using (Process curProcess = Process.GetCurrentProcess())
             using (ProcessModule? curModule = curProcess.MainModule)
             {
                 if (curModule == null) return IntPtr.Zero;
-                return SetWindowsHookEx(WH_KEYBOARD_LL, proc,
-                    GetModuleHandle(curModule.ModuleName!), 0);
+
+                // Para WH_KEYBOARD_LL, GetModuleHandle(null) é o mais recomendado no mesmo processo
+                IntPtr hMod = GetModuleHandle(null);
+                return SetWindowsHookEx(WH_KEYBOARD_LL, proc, hMod, 0);
             }
         }
 
@@ -45,9 +59,27 @@ namespace MyPlayer.classes.keyhook
             {
                 int vkCode = Marshal.ReadInt32(lParam);
                 Key key = KeyInterop.KeyFromVirtualKey(vkCode);
-                _handleKeyPress?.Invoke(key);
+                
+                // Log para debug (pode ser ruidoso, mas ajuda a confirmar se o hook está disparando)
+                // Log.Verbose("Tecla capturada via Hook Global: {Key} (VK: {VK})", key, vkCode);
+
+                if (IsMediaKey(key))
+                {
+                    Log.Information("Tecla de mídia detectada globalmente: {Key}", key);
+                    _handleKeyPress?.Invoke(key);
+                }
             }
             return CallNextHookEx(_hookID, nCode, wParam, lParam);
+        }
+
+        private static bool IsMediaKey(Key key)
+        {
+            return key == Key.MediaNextTrack || 
+                   key == Key.MediaPreviousTrack || 
+                   key == Key.MediaPlayPause || 
+                   key == Key.MediaStop ||
+                   key == Key.Play ||
+                   key == Key.Pause;
         }
 
         private const int WH_KEYBOARD_LL = 13;
@@ -65,6 +97,6 @@ namespace MyPlayer.classes.keyhook
         private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr GetModuleHandle(string lpModuleName);
+        private static extern IntPtr GetModuleHandle(string? lpModuleName);
     }
 }

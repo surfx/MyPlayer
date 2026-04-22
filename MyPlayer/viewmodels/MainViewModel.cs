@@ -255,7 +255,10 @@ namespace MyPlayer.viewmodels
         {
             switch (key)
             {
-                case Key.MediaPlayPause: PlayPause(); break;
+                case Key.MediaPlayPause: 
+                case Key.Play:
+                case Key.Pause:
+                    PlayPause(); break;
                 case Key.MediaNextTrack: NextMusic(); break;
                 case Key.MediaPreviousTrack: PreviousMusic(); break;
                 case Key.MediaStop: StopMusic(); break;
