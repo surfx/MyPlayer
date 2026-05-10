@@ -190,8 +190,8 @@ namespace MyPlayer.viewmodels
                 _musicPath = estado.MusicPath;
                 _isDarkMode = estado.IsDarkMode;
                 _fullPlaylist = estado.Musicas ?? new List<MusicaDTO>();
-                _windowWidth = estado.WindowWidth;
-                _windowHeight = estado.WindowHeight;
+                _windowWidth = Math.Max(estado.WindowWidth, 350);
+                _windowHeight = Math.Max(estado.WindowHeight, 300);
                 _windowLeft = estado.WindowLeft;
                 _windowTop = estado.WindowTop;
                 _filterText = estado.FiltroTexto;

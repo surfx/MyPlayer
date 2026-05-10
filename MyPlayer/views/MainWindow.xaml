@@ -9,6 +9,8 @@
         Title="My Player" 
         Width="{Binding WindowWidth, Mode=TwoWay}" 
         Height="{Binding WindowHeight, Mode=TwoWay}"
+        MinWidth="350"
+        MinHeight="300"
         Left="{Binding WindowLeft, Mode=TwoWay}"
         Top="{Binding WindowTop, Mode=TwoWay}"
         Background="Transparent"

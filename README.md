@@ -23,6 +23,26 @@ A "onda" que representa a execução das músicas está na classe `MyPlayer.clas
 
 `dotnet add package NAudio`
 
+## lib err
+
+se der erro crie o arquivo `nuget.config` com:
+
+```
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    <add key="dotnet10" value="https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet10/nuget/v3/index.json" />
+  </packageSources>
+</configuration>
+```
+
+```ps1
+dotnet nuget locals all --clear
+dotnet add package NAudio
+```
+
 # TODO
 
 - [X] controle de estados simples
