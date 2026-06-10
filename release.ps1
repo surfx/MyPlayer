@@ -1,13 +1,17 @@
 # Configurações
 $projectName = "MyPlayer"
 $projectPath = ".\MyPlayer\MyPlayer.csproj"
-$outputDir = ".\MyPlayer\bin\Release\net10.0-windows"
+$outputDir = ".\MyPlayer\bin\Release\net10.0"
 
 Write-Host "Iniciando processo de release para $projectName..." -ForegroundColor Cyan
 
+# Finalizando processos ativos para evitar lock de arquivo
+Write-Host "Verificando se $projectName está em execução..." -ForegroundColor Gray
+Get-Process $projectName -ErrorAction SilentlyContinue | Stop-Process -Force
+
 # Executando dotnet publish
 Write-Host "Executando dotnet publish..." -ForegroundColor Green
-dotnet restore --source https://api.nuget.org/v3/index.json --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet10/nuget/v3/index.json
+dotnet restore $projectPath --source https://api.nuget.org/v3/index.json --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet10/nuget/v3/index.json
 dotnet publish $projectPath -c Release -o $outputDir --self-contained false
 
 if ($LASTEXITCODE -eq 0) {
