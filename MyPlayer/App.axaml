@@ -3,5 +3,8 @@
              x:Class="MyPlayer.App">
     <Application.Styles>
         <FluentTheme />
+        <Style Selector="TemplatedControl">
+            <Setter Property="FontFamily" Value="JetBrains Mono, Cascadia Code, Fira Code, Consolas, monospace" />
+        </Style>
     </Application.Styles>
 </Application>

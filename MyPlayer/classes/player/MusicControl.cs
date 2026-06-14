@@ -1,157 +1,205 @@
-﻿using NAudio.Wave;
+using LibVLCSharp.Shared;
+using NAudio.Wave;
+using NLayer;
+using System;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace MyPlayer.classes.player
 {
+    public class MpegWaveStream : WaveStream
+    {
+        private readonly MpegFile _mpegFile;
+        private readonly WaveFormat _waveFormat;
+
+        public MpegWaveStream(string path)
+        {
+            _mpegFile = new MpegFile(path);
+            _waveFormat = WaveFormat.CreateIeeeFloatWaveFormat(_mpegFile.SampleRate, _mpegFile.Channels);
+        }
+
+        public override WaveFormat WaveFormat => _waveFormat;
+
+        public override long Length => _mpegFile.Length * _mpegFile.Channels * 4;
+
+        public override long Position
+        {
+            get => _mpegFile.Position * _mpegFile.Channels * 4;
+            set => _mpegFile.Position = value / (_mpegFile.Channels * 4);
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            int bytesToRead = Math.Min(count, (int)(Length - Position));
+            if (bytesToRead <= 0) return 0;
+
+            float[] floatBuffer = new float[bytesToRead / 4];
+            int samplesRead = _mpegFile.ReadSamples(floatBuffer, 0, floatBuffer.Length);
+            Buffer.BlockCopy(floatBuffer, 0, buffer, offset, samplesRead * 4);
+            return samplesRead * 4;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _mpegFile.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+    }
+
     public class MusicControl : IDisposable
     {
-        public AudioFileReader? AudioFile { get; private set; }
-        private WaveOutEvent? _waveOutEvent { get; set; }
+        private static readonly Lazy<LibVLC> _libVLC = new(() => new LibVLC("--quiet", "--no-video", "--no-sub-autodetect-file"));
+        private static LibVLC LibVLCInstance => _libVLC.Value;
 
-        public PlaybackState? PlaybackStateProp => _waveOutEvent?.PlaybackState;
+        private MediaPlayer? _mediaPlayer;
+        private Media? _media;
+
+        public WaveStream? AudioFile { get; private set; }
+        
+        public PlaybackState? PlaybackStateProp => _mediaPlayer?.State switch
+        {
+            VLCState.Playing => PlaybackState.Playing,
+            VLCState.Paused => PlaybackState.Paused,
+            _ => PlaybackState.Stopped
+        };
+
         public bool IsPlaying => PlaybackStateProp == PlaybackState.Playing;
         public bool IsPaused => PlaybackStateProp == PlaybackState.Paused;
         public bool IsStoped => PlaybackStateProp == PlaybackState.Stopped;
 
-        public bool IsValid => AudioFile != null && _waveOutEvent != null;
+        public bool IsValid => _mediaPlayer != null;
 
         public TimeSpan TotalTime { get; private set; }
 
         private bool disposed = false;
+        private bool _endedTriggered = false;
+        private readonly object _lock = new();
 
         public event EventHandler? EvtPlaying;
         public event EventHandler? EvtPaused;
         public event EventHandler? EvtResume;
         public event EventHandler? EvtStop;
+        public event EventHandler? EvtMusicEnded;
 
         public MusicControl(string musicPath)
         {
             if (string.IsNullOrEmpty(musicPath))
-                throw new ArgumentNullException(nameof(musicPath), "Caminho da música não pode ser vazio");
+                throw new ArgumentNullException(nameof(musicPath));
 
             if (!File.Exists(musicPath))
-                throw new FileNotFoundException("Arquivo de música não encontrado", musicPath);
+                throw new FileNotFoundException("Arquivo não encontrado", musicPath);
 
             try
             {
-                AudioFile = new AudioFileReader(musicPath);
-
-                // ✅ Valida se o arquivo é válido
-                if (AudioFile.TotalTime == TimeSpan.Zero)
+                if (musicPath.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
                 {
-                    AudioFile.Dispose();
-                    throw new InvalidDataException("Arquivo de áudio inválido ou corrompido");
+                    AudioFile = new MpegWaveStream(musicPath);
+                }
+                else
+                {
+                    AudioFile = new AudioFileReader(musicPath);
                 }
 
-                _waveOutEvent = new WaveOutEvent();
-                _waveOutEvent.Init(AudioFile);
-
                 TotalTime = AudioFile.TotalTime;
-                _waveOutEvent.PlaybackStopped += (s, e) =>
+
+                _media = new Media(LibVLCInstance, musicPath, FromType.FromPath);
+                _mediaPlayer = new MediaPlayer(_media);
+
+                _mediaPlayer.EndReached += (s, e) =>
                 {
-                    EvtStop?.Invoke(this, e);
+                    lock (_lock)
+                    {
+                        if (_endedTriggered) return;
+                        _endedTriggered = true;
+                    }
+
+                    Task.Run(() => 
+                    {
+                        EvtStop?.Invoke(this, EventArgs.Empty);
+                        EvtMusicEnded?.Invoke(this, EventArgs.Empty);
+                    });
                 };
+
+                _mediaPlayer.Playing += (s, e) => Task.Run(() => EvtPlaying?.Invoke(this, EventArgs.Empty));
+                _mediaPlayer.Paused += (s, e) => Task.Run(() => EvtPaused?.Invoke(this, EventArgs.Empty));
             }
-            catch (Exception ex) when (ex is not FileNotFoundException and not ArgumentNullException)
+            catch (Exception ex)
             {
-                // ✅ Cleanup em caso de erro
                 AudioFile?.Dispose();
-                _waveOutEvent?.Dispose();
+                _mediaPlayer?.Dispose();
+                _media?.Dispose();
                 AudioFile = null;
-                _waveOutEvent = null;
+                _mediaPlayer = null;
+                _media = null;
                 throw new InvalidOperationException($"Erro ao inicializar áudio: {ex.Message}", ex);
             }
         }
 
         public double GetProgress()
         {
-            if (!IsValid || TotalTime.TotalSeconds <= 0) return 0.0;
-            return (AudioFile!.CurrentTime.TotalSeconds / TotalTime.TotalSeconds) * 100;
+            if (!IsValid || _mediaPlayer == null) return 0.0;
+            float pos = _mediaPlayer.Position;
+            return pos > 0 ? pos * 100.0 : 0.0;
         }
 
-        public TimeSpan GetCurrentTime() => !IsValid ? TimeSpan.Zero : AudioFile!.CurrentTime;
-        public long GetMaxPosition() => !IsValid ? 0 : AudioFile!.Length;
+        public TimeSpan GetCurrentTime()
+        {
+            if (!IsValid || _mediaPlayer == null) return TimeSpan.Zero;
+            long timeMs = _mediaPlayer.Time;
+            // LibVLC returns -1 if no media is loaded or if time is unknown
+            return timeMs > 0 ? TimeSpan.FromMilliseconds(timeMs) : TimeSpan.Zero;
+        }
+
+        public long GetMaxPosition() => AudioFile?.Length ?? 0;
 
         #region music control
 
         public void Play()
         {
             if (!IsValid) return;
-            
-            try
-            {
-                _waveOutEvent!.Play();
-                EvtPlaying?.Invoke(this, EventArgs.Empty);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Erro ao reproduzir: {ex.Message}");
-                Stop();
-            }
+            _mediaPlayer?.Play();
         }
 
         public void Pause()
         {
             if (!IsValid || !IsPlaying) return;
-            _waveOutEvent!.Pause();
-            EvtPaused?.Invoke(this, EventArgs.Empty);
+            _mediaPlayer?.Pause();
         }
 
         public void Resume()
         {
             if (!IsValid || !IsPaused) return;
-            
-            try
-            {
-                _waveOutEvent!.Play();
-                EvtResume?.Invoke(this, EventArgs.Empty);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Erro ao retomar: {ex.Message}");
-                Stop();
-            }
+            _mediaPlayer?.Play();
+            EvtResume?.Invoke(this, EventArgs.Empty);
         }
 
         public void Stop()
         {
             if (!IsValid) return;
-            
-            _waveOutEvent?.Stop();
-            
-            try 
-            { 
-                if (AudioFile != null) 
-                    AudioFile.Position = 0; 
-            } 
-            catch (Exception ex) 
-            { 
-                Console.WriteLine($"Erro ao resetar posição: {ex.Message}");
-            }
-
+            _mediaPlayer?.Stop();
             EvtStop?.Invoke(this, EventArgs.Empty);
         }
 
         public void Seek(TimeSpan time)
         {
-            if (!IsValid) return;
-            time = time < TimeSpan.Zero ? TimeSpan.Zero : time;
-            time = time > AudioFile!.TotalTime ? AudioFile.TotalTime : time;
-            AudioFile!.CurrentTime = time;
+            if (!IsValid || _mediaPlayer == null) return;
+            _mediaPlayer.Time = (long)time.TotalMilliseconds;
         }
 
         public void SetPosition(long position)
         {
-            if (!IsValid || position < 0) return;
-            position = Math.Min(position, AudioFile!.Length);
-            AudioFile!.Position = position;
+            if (!IsValid || _mediaPlayer == null || AudioFile == null) return;
+            float percent = (float)position / AudioFile.Length;
+            _mediaPlayer.Position = Math.Clamp(percent, 0f, 1f);
         }
 
         public void SetPercent(double percent)
         {
-            if (!IsValid || AudioFile == null) return;
-            percent = Math.Clamp(percent, 0, 100);
-            var targetTime = TimeSpan.FromSeconds(TotalTime.TotalSeconds * (percent / 100.0));
-            AudioFile.CurrentTime = targetTime > TotalTime ? TotalTime : targetTime;
+            if (!IsValid || _mediaPlayer == null) return;
+            _mediaPlayer.Position = (float)(Math.Clamp(percent, 0, 100) / 100.0);
         }
 
         #endregion
@@ -172,8 +220,12 @@ namespace MyPlayer.classes.player
             {
                 try
                 {
-                    _waveOutEvent?.Stop();
-                    _waveOutEvent?.Dispose();
+                    if (_mediaPlayer != null)
+                    {
+                        _mediaPlayer.Stop();
+                        _mediaPlayer.Dispose();
+                    }
+                    _media?.Dispose();
                     AudioFile?.Dispose();
                 }
                 catch (Exception ex)

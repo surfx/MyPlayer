@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using MyPlayer.classes.controleestados;
 using MyPlayer.classes.filtrarmusicas;
 using MyPlayer.classes.playlist;
@@ -48,6 +48,8 @@ internal static class ListViewAux
                         Tag = di.FullName,
                         ImageIndex = 0,
                         SubItems = ["", di.LastWriteTime.ToString("dd/MM/yyyy HH:mm")],
+                        Tamanho = "",
+                        Data = di.LastWriteTime.ToString("dd/MM/yyyy HH:mm"),
                         IsChecked = false
                     };
                     musicas.Add(item);
@@ -68,6 +70,8 @@ internal static class ListViewAux
                     Tag = fi.FullName,
                     ImageIndex = 10,
                     SubItems = [Util.FormatFileSize(fi.Length), fi.LastWriteTime.ToString("dd/MM/yyyy HH:mm")],
+                    Tamanho = $"{(fi.Length / 1024.0 / 1024.0):F2} MB",
+                    Data = fi.LastWriteTime.ToString("dd/MM/yyyy HH:mm"),
                     IsChecked = false
                 };
                 musicas.Add(item);
@@ -101,7 +105,9 @@ internal static class ListViewAux
                 Text = item.Text,
                 ImageIndex = item.ImageIndex,
                 Tag = item.Tag ?? "",
-                SubItems = item.SubItems?.ToList() ?? []
+                SubItems = item.SubItems?.ToList() ?? [],
+                Tamanho = item.Tamanho,
+                Data = item.Data
             })
             .ToList();
     }
@@ -122,7 +128,9 @@ internal static class ListViewAux
             Text = item.Text,
             Tag = item.Tag ?? "",
             ImageIndex = item.ImageIndex,
-            SubItems = item.SubItems?.ToList() ?? []
+            SubItems = item.SubItems?.ToList() ?? [],
+            Tamanho = item.Tamanho,
+            Data = item.Data
         }).ToList();
     }
 }

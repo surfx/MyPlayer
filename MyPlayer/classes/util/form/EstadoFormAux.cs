@@ -142,6 +142,8 @@ internal static class EstadoFormAux
                         Tag = mDto.Tag,
                         ImageIndex = mDto.ImageIndex,
                         SubItems = mDto.SubItems,
+                        Tamanho = mDto.Tamanho,
+                        Data = mDto.Data,
                         IsChecked = false
                     };
                     musicas.Add(item);

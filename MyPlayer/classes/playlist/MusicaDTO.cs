@@ -1,4 +1,4 @@
-﻿namespace MyPlayer.classes.playlist
+namespace MyPlayer.classes.playlist
 {
     public class MusicaDTO
     {
@@ -6,5 +6,7 @@
         public int ImageIndex { get; set; }
         public required string Tag { get; set; } // O caminho do arquivo
         public List<string> SubItems { get; set; } = [];
+        public string Tamanho { get; set; } = string.Empty;
+        public string Data { get; set; } = string.Empty;
     }
 }

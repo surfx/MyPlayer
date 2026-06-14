@@ -1,4 +1,4 @@
-﻿using NAudio.Wave;
+using NAudio.Wave;
 using Serilog;
 
 namespace MyPlayer.classes.player
@@ -25,7 +25,7 @@ namespace MyPlayer.classes.player
 
         public TimeSpan MusicDuration => _musicControl?.TotalTime ?? TimeSpan.Zero;
         public TimeSpan CurrentTime => _musicControl?.GetCurrentTime() ?? TimeSpan.Zero;
-        public AudioFileReader? AudioFileReaderProp => _musicControl?.AudioFile;
+        public WaveStream? AudioFileReaderProp => _musicControl?.AudioFile;
 
         public PlayerControl(string musicPath)
         {
@@ -42,7 +42,6 @@ namespace MyPlayer.classes.player
                 if (!_musicControl.IsValid)
                     throw new InvalidOperationException("Não foi possível inicializar o arquivo de áudio");
 
-                // ✅ Registra eventos
                 RegisterEvents();
 
                 Log.Information("PlayerControl inicializado: {Path}", musicPath);
@@ -64,6 +63,7 @@ namespace MyPlayer.classes.player
             _musicControl.EvtPaused += (s, e) => EvtPaused?.Invoke(s, e);
             _musicControl.EvtResume += (s, e) => EvtResume?.Invoke(s, e);
             _musicControl.EvtStop += (s, e) => EvtStop?.Invoke(s, e);
+            _musicControl.EvtMusicEnded += (s, e) => EvtMusicEnded?.Invoke(s, e);
         }
 
         private void UnregisterEvents()
@@ -74,6 +74,7 @@ namespace MyPlayer.classes.player
             _musicControl.EvtPaused -= (s, e) => EvtPaused?.Invoke(s, e);
             _musicControl.EvtResume -= (s, e) => EvtResume?.Invoke(s, e);
             _musicControl.EvtStop -= (s, e) => EvtStop?.Invoke(s, e);
+            _musicControl.EvtMusicEnded -= (s, e) => EvtMusicEnded?.Invoke(s, e);
         }
 
         public void Play()
@@ -92,9 +93,7 @@ namespace MyPlayer.classes.player
                 {
                     _musicControl.Play();
 
-                    while ((IsPlaying || IsPaused) 
-                        && !_cts.Token.IsCancellationRequested 
-                        && _musicControl.GetProgress() < 100.0)
+                    while ((IsPlaying || IsPaused) && !_cts.Token.IsCancellationRequested)
                     {
                         if (!IsPaused && IsPlaying)
                         {
@@ -104,17 +103,12 @@ namespace MyPlayer.classes.player
                         await Task.Delay(200, _cts.Token);
                     }
 
-                    // ✅ Atualiza progresso final
-                    if (!_cts.Token.IsCancellationRequested)
+                    if (!_cts.Token.IsCancellationRequested && _musicControl.GetProgress() >= 99.0)
                     {
-                        EvtProgressUpdated?.Invoke(this, _musicControl.GetProgress());
-                        EvtMusicEnded?.Invoke(this, EventArgs.Empty);
+                        EvtProgressUpdated?.Invoke(this, 100.0);
                     }
                 }
-                catch (TaskCanceledException)
-                {
-                    // Normal quando Stop() é chamado
-                }
+                catch (TaskCanceledException) { }
                 catch (Exception ex)
                 {
                     Log.Error(ex, "Erro durante reprodução");
@@ -138,7 +132,6 @@ namespace MyPlayer.classes.player
         public void Stop()
         {
             if (!IsValid) return;
-            
             _cts?.Cancel();
             _musicControl?.Stop();
         }
@@ -177,9 +170,3 @@ namespace MyPlayer.classes.player
         }
     }
 }
-
-/*
-public event EventHandler<double> ProgressUpdated;
-ProgressUpdated?.Invoke(this, progress);
-player.ProgressUpdated += (s, progress) => { Console.WriteLine($"Progresso consultado: {progress:F2}%"); };
-*/

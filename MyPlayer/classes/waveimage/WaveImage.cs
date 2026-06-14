@@ -1,17 +1,19 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 using SkiaSharp;
 
 namespace MyPlayer.classes.waveimage;
 
 internal class WaveImage : IDisposable
 {
-    private AudioFileReader? _audioFile;
+    private WaveStream? _audioFile;
+    private ISampleProvider? _sampleProvider;
     private SKBitmap? _fullBitmap;
     private readonly int _topHeight;
     private readonly int _bottomHeight;
@@ -22,9 +24,10 @@ internal class WaveImage : IDisposable
     private readonly SKColor primaryDarkColor = new(2, 132, 199);
     private readonly SKColor secondaryDarkColor = new(22, 163, 74);
 
-    public WaveImage(AudioFileReader audioFile, Window window, int topHeight = 32, int bottomHeight = 32, int width = 600)
+    public WaveImage(WaveStream audioFile, Window window, int topHeight = 32, int bottomHeight = 32, int width = 600)
     {
         _audioFile = audioFile;
+        _sampleProvider = new WaveToSampleProvider(audioFile);
         _topHeight = Math.Max(32, topHeight);
         _bottomHeight = Math.Max(32, bottomHeight);
         _width = Math.Max(600, width);
@@ -57,69 +60,71 @@ internal class WaveImage : IDisposable
 
     private void RenderWaveform(SKBitmap bitmap)
     {
-        if (_audioFile == null) return;
+        if (_audioFile == null || _sampleProvider == null) return;
 
-        _audioFile.Position = 0;
-        int totalHeight = _topHeight + _bottomHeight;
-        int channels = _audioFile.WaveFormat.Channels;
-        int bytesPerSample = _audioFile.WaveFormat.BitsPerSample / 8;
-        long totalSamples = _audioFile.Length / (bytesPerSample * channels);
-        int samplesPerPixel = Math.Max(1, (int)(totalSamples / _width));
-
-        int bufferSize = 1024;
-        float[] sampleBuffer = new float[bufferSize];
-
-        using var canvas = new SKCanvas(bitmap);
-        canvas.Clear(SKColors.Transparent);
-
-        using var topPaint = new SKPaint
+        lock (_audioFile)
         {
-            Shader = CreateGradientShader(bitmap.Width, totalHeight, primaryColor, secondaryColor),
-            Style = SKPaintStyle.Stroke,
-            StrokeWidth = 1,
-            IsAntialias = true
-        };
+            _audioFile.Position = 0;
+            int totalHeight = _topHeight + _bottomHeight;
+            int channels = _audioFile.WaveFormat.Channels;
+            int bytesPerSample = _audioFile.WaveFormat.BitsPerSample / 8;
+            long totalSamples = _audioFile.Length / (bytesPerSample * channels);
+            int samplesPerPixel = Math.Max(1, (int)(totalSamples / _width));
 
-        using var bottomPaint = new SKPaint
-        {
-            Shader = CreateGradientShader(bitmap.Width, totalHeight, primaryDarkColor, secondaryDarkColor),
-            Style = SKPaintStyle.Stroke,
-            StrokeWidth = 1,
-            IsAntialias = true
-        };
+            int bufferSize = 1024 * channels;
+            float[] sampleBuffer = new float[bufferSize];
 
-        int midY = _topHeight;
-        int samplesPerColumn = Math.Max(1, samplesPerPixel);
+            using var canvas = new SKCanvas(bitmap);
+            canvas.Clear(SKColors.Transparent);
 
-        for (int x = 0; x < _width; x++)
-        {
-            float maxSample = 0f;
-            int samplesTotal = 0;
-
-            while (samplesTotal < samplesPerColumn)
+            using var topPaint = new SKPaint
             {
-                int toRead = Math.Min(bufferSize, samplesPerColumn - samplesTotal);
-                int read = _audioFile.Read(sampleBuffer, 0, toRead * channels);
-                if (read == 0) break;
+                Shader = CreateGradientShader(bitmap.Width, totalHeight, primaryColor, secondaryColor),
+                Style = SKPaintStyle.Stroke,
+                StrokeWidth = 1,
+                IsAntialias = true
+            };
 
-                for (int i = 0; i < read; i++)
+            using var bottomPaint = new SKPaint
+            {
+                Shader = CreateGradientShader(bitmap.Width, totalHeight, primaryDarkColor, secondaryDarkColor),
+                Style = SKPaintStyle.Stroke,
+                StrokeWidth = 1,
+                IsAntialias = true
+            };
+
+            int midY = _topHeight;
+
+            for (int x = 0; x < _width; x++)
+            {
+                float maxSample = 0f;
+                int samplesProcessed = 0;
+
+                while (samplesProcessed < samplesPerPixel)
                 {
-                    float absSample = Math.Abs(sampleBuffer[i]);
-                    if (absSample > maxSample)
-                        maxSample = absSample;
+                    int samplesToRead = Math.Min(samplesPerPixel - samplesProcessed, bufferSize / channels);
+                    int read = _sampleProvider.Read(sampleBuffer, 0, samplesToRead * channels);
+                    if (read == 0) break;
+
+                    for (int i = 0; i < read; i++)
+                    {
+                        float absSample = Math.Abs(sampleBuffer[i]);
+                        if (absSample > maxSample)
+                            maxSample = absSample;
+                    }
+                    samplesProcessed += read / channels;
                 }
-                samplesTotal += read / channels;
+
+                if (maxSample > 0)
+                {
+                    float peakHeight = maxSample * _topHeight * 0.9f;
+                    canvas.DrawLine(x, midY - peakHeight, x, midY, topPaint);
+                    canvas.DrawLine(x, midY, x, midY + peakHeight, bottomPaint);
+                }
             }
 
-            if (maxSample > 0)
-            {
-                float peakHeight = maxSample * _topHeight * 0.9f;
-                canvas.DrawLine(x, midY - peakHeight, x, midY, topPaint);
-                canvas.DrawLine(x, midY, x, midY + peakHeight, bottomPaint);
-            }
+            _audioFile.Position = 0;
         }
-
-        _audioFile.Position = 0;
     }
 
     private static SKShader CreateGradientShader(int width, int height, SKColor startColor, SKColor endColor)
@@ -179,5 +184,6 @@ internal class WaveImage : IDisposable
         _fullBitmap?.Dispose();
         _fullBitmap = null;
         _audioFile = null;
+        _sampleProvider = null;
     }
 }
