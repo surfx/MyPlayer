@@ -1,197 +1,178 @@
-﻿using MyPlayer.classes.controleestados;
+﻿using System.Collections.ObjectModel;
+using Avalonia.Controls;
+using MyPlayer.classes.controleestados;
 using MyPlayer.classes.filtrarmusicas;
+using MyPlayer.classes.playlist;
 using MyPlayer.classes.util.threads;
 using MyPlayer.classes.util.treeview;
 using Serilog;
 
-namespace MyPlayer.classes.util.form
+namespace MyPlayer.classes.util.form;
+
+internal static class EstadoFormAux
 {
-    internal static class EstadoFormAux
+    private static Timer? _saveTimer;
+    private static readonly object _saveLock = new();
+
+    private static TextBox? _txtFiltroCapture;
+    private static FiltrarMusicas? _filtrarMusicasCapture;
+    private static ObservableCollection<MusicaItem>? _musicasCapture;
+    private static ObservableCollection<MusicaItem>? _musicasFiltradasCapture;
+    private static FormularioEstado? _estadoAtualCapture;
+    private static bool _clearFilterCapture;
+
+    public static void SalvarEstadoDoFormularioDebounced(
+        ref TextBox txtFiltro,
+        ref FiltrarMusicas filtrarMusicas,
+        ref ObservableCollection<MusicaItem> musicas,
+        ref ObservableCollection<MusicaItem> musicasFiltradas,
+        ref FormularioEstado estadoAtual,
+        bool clearFilter = true,
+        int delayMs = 2000)
     {
-        private static System.Threading.Timer? _saveTimer;
-        private static readonly object _saveLock = new();
+        _txtFiltroCapture = txtFiltro;
+        _filtrarMusicasCapture = filtrarMusicas;
+        _musicasCapture = musicas;
+        _musicasFiltradasCapture = musicasFiltradas;
+        _estadoAtualCapture = estadoAtual;
+        _clearFilterCapture = clearFilter;
 
-        // ✅ Variáveis para captura no debounce
-        private static TextBox? _txtFiltroCapture;
-        private static FiltrarMusicas? _filtrarMusicasCapture;
-        private static ListView? _listViewCapture;
-        private static FormularioEstado? _estadoAtualCapture;
-        private static bool _clearFilterCapture;
-
-        /// <summary>
-        /// ✅ Salva com debouncing (aguarda 2 segundos de inatividade)
-        /// </summary>
-        public static void SalvarEstadoDoFormularioDebounced(
-            ref TextBox txtFiltro,
-            ref FiltrarMusicas filtrarMusicas,
-            ref ListView listView,
-            ref FormularioEstado estadoAtual,
-            bool clearFilter = true,
-            int delayMs = 2000)
+        lock (_saveLock)
         {
-            // ✅ Captura variáveis ANTES do lambda
-            _txtFiltroCapture = txtFiltro;
-            _filtrarMusicasCapture = filtrarMusicas;
-            _listViewCapture = listView;
-            _estadoAtualCapture = estadoAtual;
-            _clearFilterCapture = clearFilter;
+            _saveTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+            _saveTimer?.Dispose();
 
-            lock (_saveLock)
+            _saveTimer = new Timer(_ =>
             {
-                _saveTimer?.Change(Timeout.Infinite, Timeout.Infinite);
-                _saveTimer?.Dispose();
-
-                _saveTimer = new System.Threading.Timer(_ =>
+                if (_txtFiltroCapture != null &&
+                    _filtrarMusicasCapture != null &&
+                    _musicasCapture != null &&
+                    _musicasFiltradasCapture != null &&
+                    _estadoAtualCapture != null)
                 {
-                    // ✅ Usa variáveis capturadas
-                    if (_txtFiltroCapture != null && 
-                        _filtrarMusicasCapture != null && 
-                        _listViewCapture != null && 
-                        _estadoAtualCapture != null)
-                    {
-                        SalvarEstadoInterno(
-                            _txtFiltroCapture, 
-                            _filtrarMusicasCapture, 
-                            _listViewCapture, 
-                            _estadoAtualCapture, 
-                            _clearFilterCapture);
-                    }
-                }, null, delayMs, Timeout.Infinite);
-            }
+                    SalvarEstadoInterno(
+                        _txtFiltroCapture,
+                        _filtrarMusicasCapture,
+                        _musicasCapture,
+                        _musicasFiltradasCapture,
+                        _estadoAtualCapture,
+                        _clearFilterCapture);
+                }
+            }, null, delayMs, Timeout.Infinite);
         }
+    }
 
-        /// <summary>
-        /// ✅ Salvamento imediato
-        /// </summary>
-        public static void SalvarEstadoDoFormulario(
-            ref TextBox txtFiltro,
-            ref FiltrarMusicas filtrarMusicas,
-            ref ListView listView,
-            ref FormularioEstado estadoAtual,
-            bool clearFilter = true)
+    public static void SalvarEstadoDoFormulario(
+        ref TextBox txtFiltro,
+        ref FiltrarMusicas filtrarMusicas,
+        ref ObservableCollection<MusicaItem> musicas,
+        ref ObservableCollection<MusicaItem> musicasFiltradas,
+        ref FormularioEstado estadoAtual,
+        bool clearFilter = true)
+    {
+        SalvarEstadoInterno(txtFiltro, filtrarMusicas, musicas, musicasFiltradas, estadoAtual, clearFilter);
+    }
+
+    private static void SalvarEstadoInterno(
+        TextBox txtFiltro,
+        FiltrarMusicas filtrarMusicas,
+        ObservableCollection<MusicaItem> musicas,
+        ObservableCollection<MusicaItem> musicasFiltradas,
+        FormularioEstado estadoAtual,
+        bool clearFilter)
+    {
+        try
         {
-            SalvarEstadoInterno(txtFiltro, filtrarMusicas, listView, estadoAtual, clearFilter);
+            if (clearFilter)
+            {
+                InvokeAux.Access(txtFiltro, txt => txt.Text = string.Empty);
+                filtrarMusicas.ResetMemory();
+            }
+            else
+            {
+                string filtroAtual = InvokeAux.GetValue(txtFiltro, txt => txt.Text);
+                estadoAtual.FiltroTexto = filtroAtual;
+            }
+
+            ControleEstados.SalvarEstado(estadoAtual);
+            Log.Information("Estado salvo com sucesso");
         }
-
-        /// <summary>
-        /// ✅ Método interno que faz o salvamento real (sem ref)
-        /// </summary>
-        private static void SalvarEstadoInterno(
-            TextBox txtFiltro,
-            FiltrarMusicas filtrarMusicas,
-            ListView listView,
-            FormularioEstado estadoAtual,
-            bool clearFilter)
+        catch (Exception ex)
         {
-            try
-            {
-                if (clearFilter)
-                {
-                    InvokeAux.Access(txtFiltro, txt => txt.Text = string.Empty);
-                    filtrarMusicas.ResetMemory();
-                }
-                else
-                {
-                    string filtroAtual = InvokeAux.GetValue(txtFiltro, txt => txt.Text);
-                    estadoAtual.FiltroTexto = filtroAtual;
-                }
-
-                // Salva larguras das colunas
-                estadoAtual.ListVewStateProp.ColumnWidths = InvokeAux.GetValue(listView, lv =>
-                    lv.Columns.Cast<ColumnHeader>().Select(c => c.Width).ToList()
-                );
-
-                estadoAtual.ListVewStateProp.View = (int)InvokeAux.GetValue(listView, lv => lv.View);
-
-                ControleEstados.SalvarEstado(estadoAtual);
-                Log.Information("Estado salvo com sucesso");
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Erro ao salvar estado do formulário");
-            }
+            Log.Error(ex, "Erro ao salvar estado do formulário");
         }
+    }
 
-        /// <summary>
-        /// ✅ Carrega estado do formulário
-        /// </summary>
-        public static bool CarregarEstadoDoFormulario(
-            ref FormularioEstado estadoAtual,
-            ref FiltrarMusicas filtrarMusicas,
-            ref ListView listView,
-            ref ImageList imageList,
-            Action atualizarSelecao,
-            ref TextBox txtPath,
-            ref TreeView treeView,
-            ref TextBox txtFiltro)
+    public static bool CarregarEstadoDoFormulario(
+        ref FormularioEstado estadoAtual,
+        ref FiltrarMusicas filtrarMusicas,
+        ref ObservableCollection<MusicaItem> musicas,
+        ref ObservableCollection<MusicaItem> musicasFiltradas,
+        Action atualizarSelecao,
+        ref TextBox txtPath,
+        ref TreeView treeView,
+        ref TextBox txtFiltro)
+    {
+        try
         {
-            try
+            var estadoCarregado = ControleEstados.RecuperarEstado();
+            if (estadoCarregado == null)
             {
-                var estadoCarregado = ControleEstados.RecuperarEstado();
-                if (estadoCarregado == null)
-                {
-                    Log.Information("Nenhum estado anterior encontrado");
-                    return false;
-                }
-
-                // ✅ Atualiza por valor (não precisa de ref dentro do lambda)
-                estadoAtual.MusicPath = estadoCarregado.MusicPath;
-                estadoAtual.IndiceMusica = estadoCarregado.IndiceMusica;
-                estadoAtual.Musicas = estadoCarregado.Musicas;
-                estadoAtual.IsDarkMode = estadoCarregado.IsDarkMode;
-                estadoAtual.ListVewStateProp = estadoCarregado.ListVewStateProp;
-                string filtroTexto = estadoCarregado.FiltroTexto;
-
-                filtrarMusicas.SetEstado(estadoAtual);
-
-                // ✅ Captura variáveis locais para uso no lambda
-                var estadoLocal = estadoAtual;
-                var imageListLocal = imageList;
-                var filtrarMusicasLocal = filtrarMusicas;
-                var txtFiltroLocal = txtFiltro;
-
-                InvokeAux.Access(listView, lv =>
-                {
-                    lv.BeginUpdate();
-                    lv.Items.Clear();
-
-                    ListViewAux.ConfigurarColunasPadrao(lv, estadoLocal.ListVewStateProp.ColumnWidths);
-
-                    foreach (var musicaDto in estadoLocal.Musicas)
-                    {
-                        lv.Items.Add(ListViewAux.ToListViewItem(musicaDto));
-                    }
-
-                    lv.View = (View)estadoLocal.ListVewStateProp.View;
-                    lv.SmallImageList = imageListLocal;
-                    lv.EndUpdate();
-                });
-
-                atualizarSelecao();
-
-                // ✅ Captura variáveis para uso nos lambdas
-                var musicPath = estadoAtual.MusicPath;
-                
-                if (!string.IsNullOrEmpty(musicPath))
-                {
-                    InvokeAux.Access(txtPath, txt => txt.Text = musicPath);
-                    TreeViewUtil.PreencherTreeView(treeView, musicPath);
-                }
-
-                if (!string.IsNullOrEmpty(filtroTexto))
-                {
-                    InvokeAux.Access(txtFiltroLocal, txt => txt.Text = filtroTexto);
-                    filtrarMusicasLocal.Filtrar(filtroTexto, listView);
-                }
-
-                Log.Information("Estado carregado: {Estado}", estadoAtual);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Erro ao carregar estado");
+                Log.Information("Nenhum estado anterior encontrado");
                 return false;
             }
+
+            estadoAtual.MusicPath = estadoCarregado.MusicPath;
+            estadoAtual.IndiceMusica = estadoCarregado.IndiceMusica;
+            estadoAtual.Musicas = estadoCarregado.Musicas;
+            estadoAtual.IsDarkMode = estadoCarregado.IsDarkMode;
+            string filtroTexto = estadoCarregado.FiltroTexto;
+
+            filtrarMusicas.SetEstado(estadoAtual);
+
+            musicas.Clear();
+            musicasFiltradas.Clear();
+            if (estadoAtual.Musicas != null)
+            {
+                foreach (var mDto in estadoAtual.Musicas)
+                {
+                    var item = new MusicaItem
+                    {
+                        Text = mDto.Text,
+                        Tag = mDto.Tag,
+                        ImageIndex = mDto.ImageIndex,
+                        SubItems = mDto.SubItems,
+                        IsChecked = false
+                    };
+                    musicas.Add(item);
+                    musicasFiltradas.Add(item);
+                }
+            }
+
+            atualizarSelecao();
+
+            var pathLocal = estadoAtual.MusicPath;
+            if (!string.IsNullOrEmpty(pathLocal))
+            {
+                InvokeAux.Access(txtPath, txt => txt.Text = pathLocal);
+                TreeViewUtil.PreencherTreeView(treeView, pathLocal);
+            }
+
+            if (!string.IsNullOrEmpty(filtroTexto))
+            {
+                var musicasLocal = musicas;
+                var musicasFiltradasLocal = musicasFiltradas;
+                InvokeAux.Access(txtFiltro, txt => txt.Text = filtroTexto);
+                filtrarMusicas.Filtrar(filtroTexto, ref musicasLocal, ref musicasFiltradasLocal);
+            }
+
+            Log.Information("Estado carregado: {Estado}", estadoAtual);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Erro ao carregar estado");
+            return false;
         }
     }
 }

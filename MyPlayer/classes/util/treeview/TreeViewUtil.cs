@@ -1,79 +1,86 @@
-﻿using MyPlayer.classes.util.threads;
+﻿using Avalonia.Controls;
+using MyPlayer.classes.util.threads;
 
-namespace MyPlayer.classes.util.treeview
+namespace MyPlayer.classes.util.treeview;
+
+internal class TreeViewUtil
 {
-    internal class TreeViewUtil
+    public static void PreencherTreeView(TreeView treeView, string path)
     {
-        public static void PreencherTreeView(TreeView treeView, string path)
+        InvokeAux.Access(treeView, tv =>
         {
-            InvokeAux.Access(treeView, tv =>
+            tv.Items.Clear();
+
+            string[] partes = path.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+            string acumulador = path.StartsWith(Path.DirectorySeparatorChar.ToString())
+                ? Path.DirectorySeparatorChar.ToString()
+                : partes[0] + Path.DirectorySeparatorChar;
+
+            TreeViewItem? currentNode = null;
+
+            for (int i = 0; i < partes.Length; i++)
             {
-                tv.Nodes.Clear(); // Limpa a árvore
+                string nome = partes[i];
+                var node = new TreeViewItem { Header = nome, Tag = acumulador };
 
-                // Obter todos os níveis acima do caminho fornecido
-                string[] partes = path.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
-                string acumulador = path.StartsWith(Path.DirectorySeparatorChar.ToString()) ? Path.DirectorySeparatorChar.ToString() : partes[0] + @"\";
-
-                TreeNode? currentNode = null;
-
-                for (int i = 0; i < partes.Length; i++)
+                if (currentNode == null)
                 {
-                    string nome = partes[i];
-                    TreeNode node = new(nome) { Tag = acumulador };
-
-                    if (currentNode == null)
-                    {
-                        tv.Nodes.Add(node);
-                    }
-                    else
-                    {
-                        currentNode.Nodes.Add(node);
-                    }
-
-                    currentNode = node;
-
-                    if (i < partes.Length - 1)
-                    {
-                        acumulador = Path.Combine(acumulador, partes[i + 1]);
-                    }
+                    tv.Items.Add(node);
+                }
+                else
+                {
+                    currentNode.Items.Add(node);
                 }
 
-                // Agora currentNode é o nó raiz da pasta fornecida
-                if (Directory.Exists(path) && currentNode != null)
-                {
-                    AdicionarPastasRecursivamente(currentNode, path);
-                }
+                currentNode = node;
 
-                tv.ExpandAll(); // Expande todos os nós
-            });
+                if (i < partes.Length - 1)
+                {
+                    acumulador = Path.Combine(acumulador, partes[i + 1]);
+                }
+            }
+
+            if (Directory.Exists(path) && currentNode != null)
+            {
+                AdicionarPastasRecursivamente(currentNode, path);
+            }
+
+            foreach (var item in tv.Items)
+            {
+                if (item is TreeViewItem tvi)
+                    tvi.IsExpanded = true;
+            }
+        });
+    }
+
+    private static void AdicionarPastasRecursivamente(TreeViewItem node, string path)
+    {
+        try
+        {
+            string[] subPastas = Directory.GetDirectories(path);
+
+            foreach (string pasta in subPastas)
+            {
+                var subNode = new TreeViewItem
+                {
+                    Header = Path.GetFileName(pasta),
+                    Tag = pasta
+                };
+                node.Items.Add(subNode);
+
+                AdicionarPastasRecursivamente(subNode, pasta);
+            }
+
+            foreach (var item in node.Items)
+            {
+                if (item is TreeViewItem tvi)
+                    tvi.IsExpanded = true;
+            }
         }
-
-        private static void AdicionarPastasRecursivamente(TreeNode node, string path)
+        catch (UnauthorizedAccessException) { }
+        catch (Exception ex)
         {
-            try
-            {
-                string[] subPastas = Directory.GetDirectories(path);
-
-                foreach (string pasta in subPastas)
-                {
-                    TreeNode subNode = new(Path.GetFileName(pasta))
-                    {
-                        Tag = pasta
-                    };
-                    node.Nodes.Add(subNode);
-
-                    // Chamada recursiva para subpastas
-                    AdicionarPastasRecursivamente(subNode, pasta);
-                }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                // Ignora pastas sem permissão
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Erro ao ler pastas: " + ex.Message);
-            }
+            Serilog.Log.Error(ex, "Erro ao ler pastas");
         }
     }
 }

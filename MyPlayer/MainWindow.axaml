@@ -1,0 +1,144 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MyPlayer.MainWindow"
+        Title="My Player"
+        Width="1123" Height="630"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        Icon="/recursos/icones/mp3-audio-file-outlined.ico"
+        Loaded="MainWindow_OnLoaded"
+        KeyDown="MainWindow_KeyDown">
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="10">
+
+    <!-- Row 0: Top bar -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+      <Image Name="imgTrebleClef" Width="20" Height="20"
+             Source="/recursos/icones/icons8-treble-clef-20.png" />
+      <TextBlock Text="Músicas" VerticalAlignment="Center" />
+      <TextBox Name="txtPathMusicas" Width="740" />
+      <Button Name="btnOpenFolderMusics" Width="36" Height="30"
+              ToolTip.Tip="Abrir pasta"
+              Click="btnOpenFolderMusics_Click">
+        <Image Width="18" Height="18"
+               Source="/recursos/icones/icons8-folder-20.png" />
+      </Button>
+      <Button Name="btnDarkMode" Width="36" Height="30"
+              Click="btnDarkMode_Click">
+        <TextBlock Name="btnDarkModeText" Text="&#x1F311;" />
+      </Button>
+    </StackPanel>
+
+    <!-- Row 1: Separator -->
+    <Rectangle Grid.Row="1" Height="1" Fill="#ccc" Margin="0,0,0,4" />
+
+    <!-- Row 2: TreeView + Music List -->
+    <Grid Grid.Row="2" ColumnDefinitions="280,10,*">
+      <TreeView Name="treeView1"
+                SelectionMode="Single"
+                SelectionChanged="treeView1_AfterSelect" />
+      <GridSplitter Grid.Column="1" Width="10"
+                    Background="Transparent" />
+      <ListBox Name="listView1"
+               Grid.Column="2"
+               SelectionMode="Single"
+               DoubleTapped="listView1_DoubleClick">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <CheckBox IsChecked="{Binding IsChecked}"
+                      Content="{Binding Text}" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Grid>
+
+    <!-- Row 3: Playlist buttons + Filter -->
+    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="4"
+                Margin="0,4,0,4">
+      <Button Name="btnClearPlayList" Width="36" Height="30"
+              ToolTip.Tip="Limpar playlist"
+              Click="btnClearPlayList_Click">
+        <Image Width="18" Height="18"
+               Source="/recursos/icones/icons8-clear-20.png" />
+      </Button>
+      <Button Name="btnExcluirMusicasPlayList" Width="36" Height="30"
+              IsEnabled="False"
+              ToolTip.Tip="Remover selecionadas"
+              Click="btnExcluirMusicasPlayList_Click">
+        <Image Width="18" Height="18"
+               Source="/recursos/icones/icons8-remove-20.png" />
+      </Button>
+      <Button Name="btnSalvarMusicasPlayList" Width="36" Height="30"
+              ToolTip.Tip="Salvar playlist"
+              Click="btnSalvarMusicasPlayList_Click">
+        <Image Width="18" Height="18"
+               Source="/recursos/icones/icons8-save-20.png" />
+      </Button>
+      <Button Name="btnCarregarMusicasPlayList" Width="36" Height="30"
+              ToolTip.Tip="Carregar playlist"
+              Click="btnCarregarMusicasPlayList_Click">
+        <Image Width="18" Height="18"
+               Source="/recursos/icones/icons8-upload-20.png" />
+      </Button>
+      <TextBox Name="txtFiltro" Width="830"
+               Watermark="Filtrar músicas..."
+               TextChanged="txtFiltro_TextChanged"
+               KeyDown="txtFiltro_KeyDown" />
+    </StackPanel>
+
+    <!-- Row 4: Player controls -->
+    <Grid Grid.Row="4" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto"
+          Margin="0,4,0,4" VerticalAlignment="Center">
+
+      <Button Name="btnRandomizar" Width="36" Height="30"
+              ToolTip.Tip="Aleatório"
+              Click="btnRandomizar_Click">
+        <Image Width="18" Height="18"
+               Source="/recursos/icones/icons8-random-20.png" />
+      </Button>
+      <Button Name="btnVoltar" Grid.Column="1" Width="36" Height="30"
+              Margin="4,0,0,0"
+              ToolTip.Tip="Anterior"
+              Click="btnVoltar_Click">
+        <Image Width="18" Height="18"
+               Source="/recursos/icones/icons8-back-20.png" />
+      </Button>
+      <Button Name="btnPlayPause" Grid.Column="2" Width="36" Height="30"
+              Margin="4,0,0,0"
+              ToolTip.Tip="Tocar/Pausar"
+              Click="btnPlayPause_Click">
+        <Image Name="imgPlayPause" Width="18" Height="18"
+               Source="/recursos/icones/icons8-play-20.png" />
+      </Button>
+      <Button Name="btnProximo" Grid.Column="3" Width="36" Height="30"
+              Margin="4,0,0,0"
+              ToolTip.Tip="Próxima"
+              Click="btnProximo_Click">
+        <Image Width="18" Height="18"
+               Source="/recursos/icones/icons8-next-20.png" />
+      </Button>
+
+      <Slider Name="trackBar1" Grid.Column="4"
+              Minimum="0" Maximum="100" Value="0"
+              Margin="8,0" IsSnapToTickEnabled="False"
+              ValueChanged="trackBar1_ValueChanged" />
+
+      <TextBlock Name="lblStatus" Grid.Column="5"
+                 VerticalAlignment="Center" Margin="4,0"
+                 Text="&#x23F9; Parado" />
+
+      <ProgressBar Name="progressBar1" Grid.Column="6"
+                   Minimum="0" Maximum="100" Value="0"
+                   Width="160" Height="20"
+                   VerticalAlignment="Center" />
+    </Grid>
+
+    <!-- Row 5: Waveform -->
+    <Border Grid.Row="5" BorderBrush="#888" BorderThickness="1"
+            CornerRadius="4" Height="80">
+      <Image Name="pictureBox1" Stretch="Fill"
+             PointerPressed="pictureBox1_PointerPressed" />
+    </Border>
+
+  </Grid>
+</Window>

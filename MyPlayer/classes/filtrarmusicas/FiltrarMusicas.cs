@@ -1,97 +1,96 @@
+using System.Collections.ObjectModel;
+using MyPlayer.classes.playlist;
 using MyPlayer.classes.util.threads;
-using Serilog;
 
-namespace MyPlayer.classes.filtrarmusicas
+namespace MyPlayer.classes.filtrarmusicas;
+
+internal class FiltrarMusicas
 {
-    internal class FiltrarMusicas
+    private List<MusicaItem>? _originalItems;
+
+    private static FiltrarMusicas? _instance = null;
+    private FiltrarMusicas() { }
+
+    public string TermoFiltro { get; private set; } = string.Empty;
+
+    public static FiltrarMusicas Instance
     {
-        private List<ListViewItem>? _originalItems;
-
-        private static FiltrarMusicas? _instance = null;
-        private FiltrarMusicas() { }
-
-        public string TermoFiltro { get; private set; } = string.Empty;
-        
-        public static FiltrarMusicas Instance
+        get
         {
-            get {
-                _instance ??= new();
-                return _instance;
-            }
+            _instance ??= new();
+            return _instance;
         }
+    }
 
-        public void SetEstado(MyPlayer.classes.controleestados.FormularioEstado estado) 
-        {
-        }
+    public void SetEstado(MyPlayer.classes.controleestados.FormularioEstado estado)
+    {
+    }
 
-        public void ResetMemory() 
-        {
-            TermoFiltro = string.Empty;
-            _originalItems = null;
-        }
+    public void ResetMemory()
+    {
+        TermoFiltro = string.Empty;
+        _originalItems = null;
+    }
 
-        public void Filtrar(string termo, ListView listView)
+    public void Filtrar(string termo, ref ObservableCollection<MusicaItem> musicas, ref ObservableCollection<MusicaItem> musicasFiltradas)
+    {
+        TermoFiltro = termo?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(TermoFiltro))
         {
-            InvokeAux.Access(listView, lvw =>
+            if (_originalItems != null)
             {
-                lvw.BeginUpdate();
-
-                TermoFiltro = termo?.Trim() ?? string.Empty;
-
-                if (string.IsNullOrWhiteSpace(TermoFiltro))
+                musicasFiltradas.Clear();
+                foreach (var item in _originalItems)
                 {
-                    if (_originalItems != null)
-                    {
-                        lvw.Items.Clear();
-                        lvw.Items.AddRange(_originalItems.ToArray());
-                        _originalItems = null;
-                    }
-                    lvw.EndUpdate();
-                    return;
+                    musicasFiltradas.Add(item);
                 }
-
-                if (_originalItems == null)
-                {
-                    _originalItems = lvw.Items.Cast<ListViewItem>().ToList();
-                }
-
-                lvw.Items.Clear();
-
-                string termoLower = TermoFiltro.ToLowerInvariant();
-                var filtrados = _originalItems.Where(item =>
-                    item.Text.ToLowerInvariant().Contains(termoLower) ||
-                    (item.SubItems != null && item.SubItems.Cast<ListViewItem.ListViewSubItem>()
-                        .Any(sub => sub.Text.ToLowerInvariant().Contains(termoLower)))
-                ).ToList();
-
-                lvw.Items.AddRange(filtrados.ToArray());
-
-                lvw.EndUpdate();
-            });
-        }
-
-        public List<ListViewItem>? GetAllItems()
-        {
-            return _originalItems;
-        }
-
-        public bool ItemCorrespondeFiltro(ListViewItem item)
-        {
-            if (string.IsNullOrWhiteSpace(TermoFiltro))
-                return true;
-
-            string termoLower = TermoFiltro.ToLowerInvariant();
-            
-            if (item.Text.ToLowerInvariant().Contains(termoLower))
-                return true;
-
-            if (item.SubItems != null)
-            {
-                return item.SubItems.Cast<ListViewItem.ListViewSubItem>()
-                    .Any(sub => sub.Text.ToLowerInvariant().Contains(termoLower));
+                _originalItems = null;
             }
-
-            return false;
+            return;
         }
+
+        if (_originalItems == null)
+        {
+            _originalItems = musicasFiltradas.ToList();
+        }
+
+        musicasFiltradas.Clear();
+
+        string termoLower = TermoFiltro.ToLowerInvariant();
+        var filtrados = _originalItems.Where(item =>
+            item.Text.ToLowerInvariant().Contains(termoLower) ||
+            (item.SubItems != null && item.SubItems
+                .Any(sub => sub.ToLowerInvariant().Contains(termoLower)))
+        ).ToList();
+
+        foreach (var item in filtrados)
+        {
+            musicasFiltradas.Add(item);
+        }
+    }
+
+    public List<MusicaItem>? GetAllItems()
+    {
+        return _originalItems;
+    }
+
+    public bool ItemCorrespondeFiltro(MusicaDTO item)
+    {
+        if (string.IsNullOrWhiteSpace(TermoFiltro))
+            return true;
+
+        string termoLower = TermoFiltro.ToLowerInvariant();
+
+        if (item.Text.ToLowerInvariant().Contains(termoLower))
+            return true;
+
+        if (item.SubItems != null)
+        {
+            return item.SubItems
+                .Any(sub => sub.ToLowerInvariant().Contains(termoLower));
+        }
+
+        return false;
     }
 }
